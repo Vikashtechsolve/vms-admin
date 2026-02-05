@@ -1,16 +1,13 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { Routes, Route } from 'react-router-dom'
 import './App.css'
+import Sidebar from './components/common/Sidebar'
 
 function App() {
-  return (
-   <>
-   <div className="flex items-center justify-center min-h-screen">
-     <h1 className="text-3xl font-bold">VMS</h1>
-   </div>
-   </>
-  )
+   return (
+    <div>
+      <Sidebar />
+    </div>
+  );
 }
 
 export default App
