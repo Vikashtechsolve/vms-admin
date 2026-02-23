@@ -3,13 +3,15 @@ import { motion as MOTION, AnimatePresence } from 'framer-motion'
 import { createJob, deleteJob, getJobs, updateJob } from '../services/api.js'
 
 function Switch({ value, onChange }) {
+  const isPublic = value === 'Public'
   return (
     <button
-      onClick={() => onChange(value === 'Private' ? 'Public' : 'Private')}
-      style={{ display: 'inline-flex', alignItems: 'center', width: 58, height: 28, background: value === 'Private' ? '#e6ecff' : '#e8f6ec', borderRadius: 20, padding: 4, border: '1px solid #e3e5ea' }}
+      type="button"
+      className="visibility-toggle"
+      onClick={() => onChange(isPublic ? 'Private' : 'Public')}
       aria-label="Toggle visibility"
     >
-      <div style={{ transform: value === 'Private' ? 'translateX(0)' : 'translateX(28px)', transition: 'transform .2s ease', width: 22, height: 22, borderRadius: 22, background: value === 'Private' ? '#4c7cf5' : '#218b4c' }} />
+      <span className={`visibility-toggle-thumb ${isPublic ? 'public' : 'private'}`} />
     </button>
   )
 }
@@ -24,7 +26,12 @@ function JobCard({ job, onAction }) {
     >
       <div className="vendor-logo blue">JP</div>
       <div className="vendor-info">
-        <div className="vendor-name">Job Posted : <span style={{ color: '#3d5bc6' }}>{job.title}</span></div>
+        <div className="job-card-header">
+          <div className="vendor-name">Job Posted : <span className="job-title">{job.title}</span></div>
+          <span className="job-check" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+          </span>
+        </div>
         <div className="vendor-meta">
           Email : {job.email} <span>Contact Number : {job.contact}</span>
         </div>
@@ -204,21 +211,15 @@ export default function JobPost() {
       >
         <div>
           <h2>Job Posts</h2>
-          <p>Manage job postings and required skills for trainers and vendors !</p>
+          <p>Manage job postings and required skills for trainers and vendors.</p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
-            <span className="btn-icon">+</span>
-            <span>Add Job Post</span>
-          </button>
-          <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
-            <span className="btn-icon">+</span>
-            <span>Add New Trainer</span>
-          </button>
-        </div>
+        <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
+          <span className="btn-icon">+</span>
+          <span>Add Job Post</span>
+        </button>
       </MOTION.div>
       <div className="filters">
-        <div className="filters-title">Search</div>
+        <div className="filters-title">Search job posts</div>
         <div className="filters-row">
           <label>
             <span>Search</span>

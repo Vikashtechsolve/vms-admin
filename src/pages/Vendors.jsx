@@ -8,7 +8,7 @@ function VendorCard({ v, onAction }) {
     <article className="vendor-card">
       <div className={`vendor-logo ${v.logoTint || ''}`}>{initials || 'VN'}</div>
       <div className="vendor-info">
-        <div className="vendor-name">{v.company}</div>
+        <div className="vendor-name">{v.company.toUpperCase()}</div>
         <div className="vendor-meta">
           Company Type : {v.type}
           <span>Company Size : {v.size}</span>
@@ -36,7 +36,13 @@ function MenuButton({ onAction }) {
   const [open, setOpen] = useState(false)
   return (
     <div style={{ position: 'relative' }}>
-      <button className="more-button" aria-label="More options" onClick={() => setOpen(o => !o)}>⋯</button>
+      <button className="more-button" aria-label="More options" onClick={() => setOpen(o => !o)}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="6" r="1.5" fill="currentColor" />
+          <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+          <circle cx="12" cy="18" r="1.5" fill="currentColor" />
+        </svg>
+      </button>
       {open && (
         <div style={{ position: 'absolute', right: 0, top: 36, background: '#fff', boxShadow: '0 12px 24px rgba(0,0,0,.08)', borderRadius: 10, padding: 6, minWidth: 160 }}>
           <MenuItem label="View" onClick={() => { onAction('view'); setOpen(false) }} />
@@ -130,7 +136,7 @@ export default function Vendors({ globalSearch }) {
   const [vendors, setVendors] = useState([])
   const [modalOpen, setModalOpen] = useState(false)
   const [localQuery, setLocalQuery] = useState('')
-  const [filter, setFilter] = useState('All')
+  const [filter, setFilter] = useState('')
 
   useEffect(() => {
     getVendors().then(setVendors)
@@ -143,7 +149,7 @@ export default function Vendors({ globalSearch }) {
       const blob = `${v.company} ${v.type} ${v.hrName} ${v.email} ${v.phone} ${v.skills} ${v.hiring} ${v.mode} ${v.status}`.toLowerCase()
       const matchesQuery = (!query || blob.includes(query)) && (!qLocal || blob.includes(qLocal))
       const matchesFilter =
-        filter === 'All' ||
+        !filter || filter === 'All' ||
         (filter === 'Active' && v.status === 'Active') ||
         (filter === 'On-hold' && v.status === 'On-hold') ||
         (filter === 'IT Firm' && v.type === 'IT Firm') ||
@@ -180,14 +186,16 @@ export default function Vendors({ globalSearch }) {
 
   return (
     <>
-      <div className="hero-card">
+      <div className="hero-card hero-card-vendor">
         <div>
           <h2>Vendor Management</h2>
           <p>Manage vendor profiles generated from trainer data and oversee related operations !</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
-          <span className="btn-icon">+</span>
-          <span>Add Vendor</span>
+        <button type="button" className="add-vendor-figma" onClick={() => setModalOpen(true)} aria-label="Add Vendor">
+          <span className="add-vendor-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+          </span>
+          <span className="add-vendor-label">Add Vendor</span>
         </button>
       </div>
       <div className="filters">
@@ -200,7 +208,8 @@ export default function Vendors({ globalSearch }) {
           <label>
             <span>Filter</span>
             <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-              <option>All</option>
+              <option value="">Filter by</option>
+              <option value="All">All</option>
               <option>Active</option>
               <option>On-hold</option>
               <option>IT Firm</option>
