@@ -1,1 +1,36 @@
 @import "tailwindcss";
+
+:root {
+  font-family: "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+  /* Figma: light grey canvas, white sidebar/cards, red active */
+  --bg-main: #F6F7FB;
+  --bg-card: #FFFFFF;
+  --sidebar-bg: #FFFFFF;
+  --sidebar-active-bg: #FDF2F2;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --accent-blue: #007BFF;
+  --accent-red: #DC3545;
+  --accent-green: #28A745;
+  --border-light: #E5E7EB;
+  --alert-bg: #FDF1F2;
+  --activity-panel-bg: #EFF2F6;
+  --shadow-card: 0px 4px 6px rgba(0, 0, 0, 0.07), 0px 2px 4px rgba(0, 0, 0, 0.05);
+  --radius-card: 10px;
+  --radius-input: 8px;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
