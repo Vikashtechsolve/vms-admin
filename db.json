@@ -1,0 +1,200 @@
+{
+  "trainers": [
+    {
+      "id": 1,
+      "name": "Prakash Jain",
+      "photo": "https://i.pravatar.cc/150?u=prakash-jain",
+      "contact": "8825145670",
+      "location": "Bangalore",
+      "qualification": "B.Tech",
+      "passingYear": "2023",
+      "subject": "DSA",
+      "teachingExperience": "5 Year",
+      "developmentExperience": "5 Year",
+      "totalExperience": "10 Year",
+      "workLookingFor": "Full-Time Trainer",
+      "mode": "Offline Mode",
+      "payoutExpectations": "8 Hour",
+      "comments": [
+        {
+          "id": "c1",
+          "authorName": "Vikash Dubey",
+          "authorInitials": "VD",
+          "text": "Profile reviewed and verified.",
+          "createdAt": "1 day ago",
+          "verified": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Akash Rajput",
+      "contact": "9825145670",
+      "location": "Delhi",
+      "qualification": "BCA",
+      "passingYear": "2022",
+      "subject": "Java",
+      "teachingExperience": "3 Year",
+      "developmentExperience": "2 Year",
+      "totalExperience": "5 Year",
+      "workLookingFor": "Part-Time Trainer",
+      "mode": "Online Mode",
+      "payoutExpectations": "6 Hour",
+      "comments": []
+    },
+    {
+      "id": 3,
+      "name": "Rahul Desai",
+      "contact": "7725514570",
+      "location": "Mumbai",
+      "qualification": "MCA",
+      "passingYear": "2021",
+      "subject": "Full Stack",
+      "teachingExperience": "4 Year",
+      "developmentExperience": "6 Year",
+      "totalExperience": "10 Year",
+      "workLookingFor": "Full-Time Trainer",
+      "mode": "Offline Mode",
+      "payoutExpectations": "10 Hour",
+      "comments": [
+        {
+          "id": "c2",
+          "authorName": "Vikash Dubey",
+          "authorInitials": "VD",
+          "text": "Skills verified. Ready for assignments.",
+          "createdAt": "2 days ago",
+          "verified": true
+        }
+      ]
+    }
+  ],
+  "vendors": [
+    {
+      "id": 1,
+      "company": "EDU SKILL COMPANY",
+      "type": "Training Institute",
+      "size": "40-50 employees",
+      "status": "Active",
+      "hrName": "Riya Kapoor",
+      "email": "riya.2324@gmail.com",
+      "phone": "9825145670",
+      "skills": "Python, Excel, SQL, Power BI, Tableau",
+      "hiring": "Full-Time Trainer",
+      "mode": "Offline Mode",
+      "logoTint": ""
+    },
+    {
+      "id": 2,
+      "company": "Appz Global Solutions",
+      "type": "IT Firm",
+      "size": "60-80 employees",
+      "status": "On-hold",
+      "hrName": "Priyanka Chopra",
+      "email": "chopra.224@gmail.com",
+      "phone": "8825145670",
+      "skills": "SEO, Google Ads, Meta Ads, Social Media Marketing",
+      "hiring": "Part-Time Trainer",
+      "mode": "Offline Mode",
+      "logoTint": "blue"
+    },
+    {
+      "id": 3,
+      "company": "Alt+F",
+      "type": "IT Firm",
+      "size": "40-50 employees",
+      "status": "Active",
+      "hrName": "Priya Bisht",
+      "email": "priya.2004@gmail.com",
+      "phone": "7825145670",
+      "skills": "Java, Python, Data Structures & Algorithms, System Design",
+      "hiring": "Full-Time Trainer",
+      "mode": "Offline Mode",
+      "logoTint": "green"
+    },
+    {
+      "id": "9c52",
+      "company": "",
+      "type": "IT Firm",
+      "size": "50-60 employees",
+      "status": "Active",
+      "hrName": "",
+      "email": "",
+      "phone": "",
+      "skills": "",
+      "hiring": "Full-Time Trainer",
+      "mode": "Offline Mode",
+      "createdAt": "2026-02-05"
+    }
+  ],
+  "jobs": [
+    {
+      "id": 1,
+      "title": "Data Analytics",
+      "email": "malhotra.2509@gmail.com",
+      "contact": "9825145670",
+      "skills": "SQL, Python, Java, C++",
+      "experience": "3 Y",
+      "trainersNeeded": "10",
+      "level": "Intermediate",
+      "trainingType": "Corporate Training",
+      "mode": "Offline Mode",
+      "duration": "6 hours",
+      "location": "Delhi",
+      "budget": "Null",
+      "accommodation": "Yes",
+      "language": "English",
+      "visibility": "Private",
+      "requirements": []
+    },
+    {
+      "id": 2,
+      "title": "Python Trainer",
+      "email": "goyal2509@gmail.com",
+      "contact": "7725514570",
+      "skills": "Python, Power BI",
+      "experience": "4 Y",
+      "trainersNeeded": "15",
+      "level": "Advanced",
+      "trainingType": "Workshop",
+      "mode": "Offline Mode",
+      "duration": "8 hours",
+      "location": "Chandigarh",
+      "budget": "Null",
+      "accommodation": "No",
+      "language": "English, Regional",
+      "visibility": "Private",
+      "requirements": []
+    },
+    {
+      "id": 3,
+      "title": "Full Stack Trainer",
+      "email": "riy.2009@gmail.com",
+      "contact": "8825145670",
+      "skills": "HTML, CSS, JS",
+      "experience": "6 Y",
+      "trainersNeeded": "08",
+      "level": "Advanced",
+      "trainingType": "University",
+      "mode": "Online Mode",
+      "duration": "8 hours",
+      "location": "Bangalore",
+      "budget": "Null",
+      "accommodation": "Yes",
+      "language": "English, Hindi",
+      "visibility": "Private",
+      "requirements": []
+    }
+  ],
+  "importantLinks": [
+    {
+      "id": 1,
+      "description": "VMS Documentation",
+      "url": "https://docs.example.com/vms"
+    },
+    {
+      "id": 2,
+      "description": "Training Portal",
+      "url": "https://training.example.com"
+    }
+  ]
+}
