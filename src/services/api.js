@@ -1,11 +1,13 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+// Production uses same-origin /api proxy (vercel.json → Railway). Local dev hits backend directly.
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? '/api' : 'http://localhost:4000/api')
 
 const api = axios.create({
   baseURL: API_BASE_URL,
 })
-//MINOR CHANGE
 const TOKEN_KEY = 'traineradda_admin_token'
 
 export function getStoredToken() {

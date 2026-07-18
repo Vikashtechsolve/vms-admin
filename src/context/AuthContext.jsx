@@ -35,7 +35,10 @@ export function AuthProvider({ children }) {
       }
       return { success: false, error: 'Invalid response from server' }
     } catch (err) {
-      const message = err.response?.data?.error || err.message || 'Login failed'
+      const isNetworkError = !err.response && err.message === 'Network Error'
+      const message = isNetworkError
+        ? 'Cannot reach the API server. Check your connection or contact support.'
+        : err.response?.data?.error || err.message || 'Login failed'
       return { success: false, error: message }
     }
   }, [])
