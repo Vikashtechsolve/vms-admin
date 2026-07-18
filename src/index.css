@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  font-family: "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+  font-family: "Poppins", "Segoe UI", Roboto, system-ui, sans-serif;
   /* Figma: light grey canvas, white sidebar/cards, red active */
   --bg-main: #F6F7FB;
   --bg-card: #FFFFFF;
@@ -10,8 +10,8 @@
   --text-primary: #333333;
   --text-secondary: #666666;
   --text-muted: #999999;
-  --accent-blue: #007BFF;
-  --accent-red: #DC3545;
+  --accent-blue: #C1272D;
+  --accent-red: #C1272D;
   --accent-green: #28A745;
   --border-light: #E5E7EB;
   --alert-bg: #FDF1F2;
@@ -33,4 +33,19 @@ button,
 input,
 select {
   font-family: inherit;
+}
+
+button:not(:disabled),
+a,
+label,
+summary,
+[role="button"] {
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
 }

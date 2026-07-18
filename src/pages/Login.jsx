@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
+import AdminBrand from '../components/AdminBrand.jsx'
 
 export default function Login() {
   const { login } = useAuth()
@@ -24,15 +25,13 @@ export default function Login() {
   return (
     <div className="login-page">
       <nav className="login-navbar">
-        <div className="login-brand">
-          <img src="/vms.png" alt="VMS" className="login-brand-logo" />
-        </div>
+        <AdminBrand />
       </nav>
 
       <main className="login-main">
         <div className="login-card">
           <h1 className="login-title">Admin Login</h1>
-          <p className="login-subtitle">Sign in to access the VMS Admin Panel</p>
+          <p className="login-subtitle">Sign in to access the Trainer Adda Admin Panel</p>
 
           <form onSubmit={handleSubmit} className="login-form">
             {error && (

@@ -142,22 +142,6 @@ function TrainerCard({ trainer, onAddComment, onDeleteComment, onEdit, onDelete 
   )
 }
 
-const TRAINER_FORM_FIELDS = [
-  ['name', 'Name'],
-  ['contact', 'Contact Number'],
-  ['location', 'Location'],
-  ['qualification', 'Qualification'],
-  ['passingYear', 'Passing Year'],
-  ['subject', 'Subject'],
-  ['teachingExperience', 'Teaching Experience'],
-  ['developmentExperience', 'Development Experience'],
-  ['totalExperience', 'Total Experience'],
-  ['workLookingFor', 'Work Looking for'],
-  ['mode', 'Mode'],
-  ['payoutExpectations', 'Payout Expectations (Per hour)'],
-  ['photo', 'Photo URL (optional – or upload file below)'],
-]
-
 const TRAINER_DEFAULTS = {
   name: '',
   contact: '',
@@ -172,61 +156,262 @@ const TRAINER_DEFAULTS = {
   mode: 'Offline Mode',
   payoutExpectations: '',
   photo: '',
+  resume: '',
   comments: [],
 }
+
+const PASSING_YEARS = (() => {
+  const y = new Date().getFullYear()
+  return Array.from({ length: y - 1979 }, (_, i) => String(y - i))
+})()
 
 function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
   const [form, setForm] = useState({ ...TRAINER_DEFAULTS })
   const [photoFile, setPhotoFile] = useState(null)
+  const [resumeFile, setResumeFile] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [status, setStatus] = useState('')
+
   useEffect(() => {
+    if (!open) return
+    setError('')
+    setStatus('')
+    setSaving(false)
     if (isAdd) {
       setForm({ ...TRAINER_DEFAULTS })
       setPhotoFile(null)
+      setResumeFile(null)
     } else if (trainer) {
       setForm({ ...TRAINER_DEFAULTS, ...trainer })
       setPhotoFile(null)
+      setResumeFile(null)
     }
   }, [trainer, isAdd, open])
+
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [open])
+
   if (!open) return null
-  function handleSubmit(e) {
-    e.preventDefault()
-    const payload = isAdd ? form : { ...trainer, ...form }
-    onSubmit(payload, photoFile || undefined)
+
+  function setField(key, value) {
+    setForm((f) => ({ ...f, [key]: value }))
+  }
+
+  function handleClose() {
+    if (saving) return
     onClose()
   }
+
+  function pickPhoto(file) {
+    setError('')
+    if (!file) {
+      setPhotoFile(null)
+      return
+    }
+    if (!file.type.startsWith('image/')) {
+      setError('Profile photo must be an image (JPG, PNG, or WebP).')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Profile photo must be under 5MB.')
+      return
+    }
+    setPhotoFile(file)
+  }
+
+  function pickResume(file) {
+    setError('')
+    if (!file) {
+      setResumeFile(null)
+      return
+    }
+    const ok =
+      file.type === 'application/pdf' ||
+      file.type.includes('word') ||
+      /\.(pdf|doc|docx)$/i.test(file.name)
+    if (!ok) {
+      setError('Resume must be a PDF or DOC file.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Resume must be under 5MB.')
+      return
+    }
+    setResumeFile(file)
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (saving) return
+    setError('')
+
+    if (!form.name.trim() || !form.contact.trim()) {
+      setError('Full name and contact number are required.')
+      return
+    }
+
+    setSaving(true)
+    const hasFiles = !!(photoFile || resumeFile)
+    setStatus(hasFiles ? 'Uploading files and saving profile…' : 'Saving trainer profile…')
+
+    try {
+      const payload = isAdd
+        ? { ...form, name: form.name.trim(), contact: form.contact.trim() }
+        : { ...trainer, ...form, name: form.name.trim(), contact: form.contact.trim() }
+      await onSubmit(payload, photoFile || null, resumeFile || null)
+      onClose()
+    } catch (err) {
+      const msg =
+        err?.response?.data?.error ||
+        err?.message ||
+        'Something went wrong. Please try again.'
+      setError(msg)
+      setStatus('')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
-    <div className="modal-overlay" onClick={onClose} aria-hidden="true">
-      <div className="modal-content edit-trainer-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={handleClose} role="presentation">
+      <div
+        className="modal-content edit-trainer-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-trainer-title"
+      >
         <div className="modal-header">
-          <h3>{isAdd ? 'Add New Trainer Profile' : 'Edit Trainer Details'}</h3>
-          <button type="button" className="btn-close" aria-label="Close" onClick={onClose}>✕</button>
+          <h3 id="edit-trainer-title">{isAdd ? 'Create New Trainer Profile' : 'Edit Trainer Details'}</h3>
+          <button type="button" className="btn-close" aria-label="Close" onClick={handleClose} disabled={saving}>✕</button>
         </div>
-        <form onSubmit={handleSubmit}>
+
+        <form onSubmit={handleSubmit} className="edit-trainer-modal-form">
           <div className="edit-trainer-form">
-            {TRAINER_FORM_FIELDS.map(([key, label]) => (
-              <label key={key}>
-                <span>{label}</span>
-                <input
-                  type="text"
-                  value={form[key] ?? ''}
-                  onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                  placeholder={label}
-                />
-              </label>
-            ))}
-            <label className="edit-trainer-photo-upload">
-              <span>Upload profile photo (stored in Cloudinary)</span>
+            {error && (
+              <div className="modal-banner modal-banner--error" role="alert">
+                {error}
+              </div>
+            )}
+            {saving && status && (
+              <div className="modal-banner modal-banner--info" role="status">
+                <span className="modal-spinner" aria-hidden="true" />
+                {status}
+              </div>
+            )}
+
+            <p className="edit-trainer-section">Personal Information</p>
+
+            <label>
+              <span>Full Name *</span>
+              <input type="text" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="Enter full name" required disabled={saving} />
+            </label>
+            <label>
+              <span>Contact Number *</span>
+              <input type="text" value={form.contact} onChange={(e) => setField('contact', e.target.value)} placeholder="Enter contact number" required disabled={saving} />
+            </label>
+            <label className="edit-trainer-span-2">
+              <span>Location</span>
+              <input type="text" value={form.location} onChange={(e) => setField('location', e.target.value)} placeholder="City / Location" disabled={saving} />
+            </label>
+
+            <p className="edit-trainer-section">Professional Information</p>
+
+            <label>
+              <span>Qualification</span>
+              <input type="text" value={form.qualification} onChange={(e) => setField('qualification', e.target.value)} placeholder="e.g. B.Tech, MCA" disabled={saving} />
+            </label>
+            <label>
+              <span>Passing Year</span>
+              <select value={form.passingYear} onChange={(e) => setField('passingYear', e.target.value)} disabled={saving}>
+                <option value="">Select year</option>
+                {PASSING_YEARS.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Subject</span>
+              <input type="text" value={form.subject} onChange={(e) => setField('subject', e.target.value)} placeholder="e.g. Java, React, DSA" disabled={saving} />
+            </label>
+            <label>
+              <span>Payout Expectations (Per hour)</span>
+              <input type="text" value={form.payoutExpectations} onChange={(e) => setField('payoutExpectations', e.target.value)} placeholder="e.g. 800" disabled={saving} />
+            </label>
+            <label>
+              <span>Teaching Experience</span>
+              <input type="text" value={form.teachingExperience} onChange={(e) => setField('teachingExperience', e.target.value)} placeholder="e.g. 3 Years" disabled={saving} />
+            </label>
+            <label>
+              <span>Development Experience</span>
+              <input type="text" value={form.developmentExperience} onChange={(e) => setField('developmentExperience', e.target.value)} placeholder="e.g. 5 Years" disabled={saving} />
+            </label>
+            <label>
+              <span>Total Experience</span>
+              <input type="text" value={form.totalExperience} onChange={(e) => setField('totalExperience', e.target.value)} placeholder="e.g. 8 Years" disabled={saving} />
+            </label>
+            <label>
+              <span>Work Looking for</span>
+              <select value={form.workLookingFor} onChange={(e) => setField('workLookingFor', e.target.value)} disabled={saving}>
+                <option value="Full-Time Trainer">Full-Time Trainer</option>
+                <option value="Part-Time Trainer">Part-Time Trainer</option>
+                <option value="Full-Time Trainer,Part-Time Trainer">Both</option>
+              </select>
+            </label>
+            <label>
+              <span>Mode</span>
+              <select value={form.mode} onChange={(e) => setField('mode', e.target.value)} disabled={saving}>
+                <option value="Offline Mode">Offline Mode</option>
+                <option value="Online Mode">Online Mode</option>
+                <option value="Online Mode,Offline Mode">Hybrid</option>
+              </select>
+            </label>
+
+            <p className="edit-trainer-section">Uploads</p>
+
+            <label className="edit-trainer-upload">
+              <span>Profile photo</span>
               <input
                 type="file"
-                accept="image/*"
-                onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+                accept="image/jpeg,image/png,image/webp"
+                disabled={saving}
+                onChange={(e) => pickPhoto(e.target.files?.[0] || null)}
               />
-              {photoFile && <span className="photo-filename">{photoFile.name}</span>}
+              {photoFile ? (
+                <span className="photo-filename">{photoFile.name}</span>
+              ) : form.photo ? (
+                <span className="photo-filename">Current photo already set</span>
+              ) : null}
+            </label>
+
+            <label className="edit-trainer-upload">
+              <span>Resume (PDF / DOC)</span>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,application/pdf"
+                disabled={saving}
+                onChange={(e) => pickResume(e.target.files?.[0] || null)}
+              />
+              {resumeFile ? (
+                <span className="photo-filename">{resumeFile.name}</span>
+              ) : form.resume ? (
+                <a href={form.resume} target="_blank" rel="noopener noreferrer" className="trainer-link photo-filename">View current resume</a>
+              ) : null}
             </label>
           </div>
+
           <div className="modal-actions">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary">{isAdd ? 'Create' : 'Save Changes'}</button>
+            <button type="button" className="btn btn-ghost" onClick={handleClose} disabled={saving}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving
+                ? (isAdd ? 'Creating…' : 'Saving…')
+                : (isAdd ? 'Create Profile' : 'Save Changes')}
+            </button>
           </div>
         </form>
       </div>
@@ -274,12 +459,19 @@ export default function Trainers() {
   const [filter, setFilter] = useState('')
   const [commentModal, setCommentModal] = useState(null)
   const [editModal, setEditModal] = useState(null) // null = closed, 'add' = add mode, trainer = edit
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     getTrainers()
       .then(setTrainers)
       .catch(() => setTrainers([]))
   }, [])
+
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 3500)
+    return () => clearTimeout(t)
+  }, [toast])
 
   const filtered = trainers.filter((t) => {
     const q = search.trim().toLowerCase()
@@ -301,28 +493,38 @@ export default function Trainers() {
     updateTrainer(trainer.id, updated).catch(() => {})
   }
 
-  function handleCreateTrainer(form, photoFile) {
-    const newTrainer = { ...form, comments: form.comments || [] }
-    createTrainer(newTrainer, photoFile)
-      .then((res) => setTrainers((cur) => [res, ...cur]))
-      .catch(() => {})
+  async function handleCreateTrainer(form, photoFile, resumeFile) {
+    const res = await createTrainer({ ...form, comments: form.comments || [] }, photoFile, resumeFile)
+    setTrainers((cur) => [res, ...cur])
+    setToast({ type: 'success', text: `Trainer profile created for ${res.name}.` })
   }
 
-  function handleEditTrainer(payload, photoFile) {
+  async function handleEditTrainer(payload, photoFile, resumeFile) {
     const id = payload.id
-    updateTrainer(id, payload, photoFile)
-      .then((res) => setTrainers((cur) => cur.map((t) => (t.id === id ? res : t))))
-      .catch(() => {})
+    const res = await updateTrainer(id, payload, photoFile, resumeFile)
+    setTrainers((cur) => cur.map((t) => (t.id === id ? res : t)))
+    setToast({ type: 'success', text: `Trainer profile updated for ${res.name}.` })
   }
 
   function handleDeleteTrainer(trainer) {
     if (!confirm(`Delete trainer "${trainer.name}"?`)) return
     setTrainers((cur) => cur.filter((t) => t.id !== trainer.id))
-    deleteTrainer(trainer.id).catch(() => {})
+    deleteTrainer(trainer.id)
+      .then(() => setToast({ type: 'success', text: `Deleted ${trainer.name}.` }))
+      .catch(() => {
+        setTrainers((cur) => [trainer, ...cur])
+        setToast({ type: 'error', text: 'Failed to delete trainer. Please try again.' })
+      })
   }
 
   return (
     <>
+      {toast && (
+        <div className={`page-toast page-toast--${toast.type}`} role="status">
+          {toast.text}
+          <button type="button" className="page-toast-close" onClick={() => setToast(null)} aria-label="Dismiss">✕</button>
+        </div>
+      )}
       <div className="hero-card">
         <div>
           <h2>Trainers</h2>
@@ -371,7 +573,10 @@ export default function Trainers() {
         trainer={editModal === 'add' ? null : editModal}
         isAdd={editModal === 'add'}
         onClose={() => setEditModal(null)}
-        onSubmit={(data, photoFile) => (editModal === 'add' ? handleCreateTrainer(data, photoFile) : handleEditTrainer(data, photoFile))}
+        onSubmit={async (data, photoFile, resumeFile) => {
+          if (editModal === 'add') await handleCreateTrainer(data, photoFile, resumeFile)
+          else await handleEditTrainer(data, photoFile, resumeFile)
+        }}
       />
     </>
   )
