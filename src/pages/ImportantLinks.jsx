@@ -43,7 +43,7 @@ function AddLinkModal({ open, onClose, onSubmit }) {
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. VMS Documentation"
+              placeholder="e.g. Trainer Adda Documentation"
               required
             />
           </label>

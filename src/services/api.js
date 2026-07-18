@@ -4,10 +4,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
 })
 
-const TOKEN_KEY = 'vms_admin_token'
+const TOKEN_KEY = 'traineradda_admin_token'
 
 export function getStoredToken() {
   return typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null
@@ -21,6 +20,22 @@ export function setStoredToken(token) {
 }
 
 api.interceptors.request.use((config) => {
+  // Let the browser set multipart boundary for FormData; JSON otherwise
+  if (config.data instanceof FormData) {
+    const h = config.headers
+    if (h) {
+      if (typeof h.delete === 'function') h.delete('Content-Type')
+      else {
+        delete h['Content-Type']
+        delete h['content-type']
+      }
+    }
+  } else if (config.data != null) {
+    const h = config.headers
+    if (h && !h['Content-Type'] && !h['content-type']) {
+      h['Content-Type'] = 'application/json'
+    }
+  }
   const token = getStoredToken()
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
@@ -62,29 +77,39 @@ export const getJobApplications = (jobId) => api.get(`/jobs/${jobId}/application
 export const getTrainers = () => api.get('/trainers').then((r) => r.data)
 export const getTrainer = (id) => api.get(`/trainers/${id}`).then((r) => r.data)
 
-function trainerPayload(trainer, photoFile) {
-  if (photoFile) {
+const TRAINER_FORM_SKIP = new Set(['photo', 'resume', 'id', '_id', 'createdAt', 'updatedAt', '__v'])
+
+function trainerPayload(trainer, photoFile, resumeFile) {
+  if (photoFile || resumeFile) {
     const form = new FormData()
     Object.entries(trainer).forEach(([k, v]) => {
+      if (TRAINER_FORM_SKIP.has(k)) return
       if (k === 'comments') form.append(k, JSON.stringify(v || []))
       else if (v != null && v !== '') form.append(k, v)
     })
-    form.append('photo', photoFile)
+    if (photoFile) form.append('photo', photoFile)
+    if (resumeFile) form.append('resume', resumeFile)
     return form
   }
-  return { ...trainer, comments: trainer.comments || [] }
+  const { photo, resume, ...rest } = trainer
+  return {
+    ...rest,
+    photo: typeof photo === 'string' ? photo : '',
+    resume: typeof resume === 'string' ? resume : '',
+    comments: trainer.comments || [],
+  }
 }
 
-export const createTrainer = (trainer, photoFile = null) => {
-  const payload = trainerPayload(trainer, photoFile)
-  const options = payload instanceof FormData ? {} : {}
-  return api.post('/trainers', payload, options).then((r) => r.data)
+export const createTrainer = (trainer, photoFile = null, resumeFile = null) => {
+  const payload = trainerPayload(trainer, photoFile, resumeFile)
+  const config = payload instanceof FormData ? { headers: { 'Content-Type': undefined } } : undefined
+  return api.post('/trainers', payload, config).then((r) => r.data)
 }
 
-export const updateTrainer = (id, trainer, photoFile = null) => {
-  const payload = trainerPayload(trainer, photoFile)
-  const options = payload instanceof FormData ? {} : {}
-  return api.put(`/trainers/${id}`, payload, options).then((r) => r.data)
+export const updateTrainer = (id, trainer, photoFile = null, resumeFile = null) => {
+  const payload = trainerPayload(trainer, photoFile, resumeFile)
+  const config = payload instanceof FormData ? { headers: { 'Content-Type': undefined } } : undefined
+  return api.put(`/trainers/${id}`, payload, config).then((r) => r.data)
 }
 
 export const deleteTrainer = (id) => api.delete(`/trainers/${id}`)

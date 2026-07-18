@@ -219,7 +219,7 @@ export default function Vendors({ globalSearch }) {
       <div className="hero-card hero-card-vendor">
         <div>
           <h2>Vendor Management</h2>
-          <p>Manage vendor profiles generated from trainer data and oversee related operations!</p>
+          <p>Manage company and vendor profiles that hire trainers through Trainer Adda.</p>
         </div>
         <button type="button" className="add-vendor-figma" onClick={() => setModalOpen('add')} aria-label="Add Vendor">
           <span className="add-vendor-circle">

@@ -92,7 +92,7 @@ function MessageDrawer({ msg, onClose, onDelete, onMarkRead }) {
 
           {/* Quick reply */}
           <a
-            href={`mailto:${msg.email}?subject=Re: Your VMS Contact Request`}
+            href={`mailto:${msg.email}?subject=Re: Your Trainer Adda Contact Request`}
             className="contact-reply-btn"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">

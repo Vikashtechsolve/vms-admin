@@ -25,8 +25,8 @@ export default function Dashboard() {
             </svg>
           </span>
           <div>
-            <h2>— VMS Dashboard</h2>
-            <p>Managing Trainers & Vendors data and overseeing manpower operations!</p>
+            <h2>Trainer Adda Dashboard</h2>
+            <p>Manage trainers, vendors, and training operations in one place.</p>
           </div>
         </div>
       </div>

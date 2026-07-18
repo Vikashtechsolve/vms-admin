@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { loginApi, getStoredToken, setStoredToken } from '../services/api.js'
 
-const STORAGE_KEY = 'vms_admin_user'
+const STORAGE_KEY = 'traineradda_admin_user'
 
 const AuthContext = createContext(null)
 

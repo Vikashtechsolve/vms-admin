@@ -10,6 +10,7 @@ import Trainers from './pages/Trainers.jsx'
 import JobPost from './pages/JobPost.jsx'
 import ImportantLinks from './pages/ImportantLinks.jsx'
 import ContactMessages from './pages/ContactMessages.jsx'
+import AdminBrand from './components/AdminBrand.jsx'
 
 const MenuIcons = {
   dashboard: () => (
@@ -71,74 +72,78 @@ function Shell({ children, onSearch, user, onLogout }) {
         <div className={`sidebar-overlay ${sidebarOpen ? 'show' : ''}`} onClick={() => setSidebarOpen(false)} aria-hidden="true" />
         <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="brand">
-            <img src="/vms.png" alt="VMS" className="brand-logo" />
+            <AdminBrand showAdminBadge />
           </div>
           <nav className="menu">
-            <Link className={`menu-item ${location.pathname === '/' ? 'active' : ''}`} to="/" onClick={() => setSidebarOpen(false)}>
+            <Link className={`menu-item ${location.pathname === '/' ? 'active' : ''}`} to="/" title="Dashboard" onClick={() => setSidebarOpen(false)}>
               <span className="menu-icon">{MenuIcons.dashboard()}</span>
-              Dashboard
+              <span className="menu-label">Dashboard</span>
             </Link>
-            <Link className={`menu-item ${location.pathname.startsWith('/trainers') ? 'active' : ''}`} to="/trainers" onClick={() => setSidebarOpen(false)}>
+            <Link className={`menu-item ${location.pathname.startsWith('/trainers') ? 'active' : ''}`} to="/trainers" title="Trainer Records" onClick={() => setSidebarOpen(false)}>
               <span className="menu-icon">{MenuIcons.trainers()}</span>
-              Trainer Records
+              <span className="menu-label">Trainer Records</span>
             </Link>
-            <Link className={`menu-item ${location.pathname.startsWith('/vendors') ? 'active' : ''}`} to="/vendors" onClick={() => setSidebarOpen(false)}>
+            <Link className={`menu-item ${location.pathname.startsWith('/vendors') ? 'active' : ''}`} to="/vendors" title="Vendor Records" onClick={() => setSidebarOpen(false)}>
               <span className="menu-icon">{MenuIcons.vendors()}</span>
-              Vendor Records
+              <span className="menu-label">Vendor Records</span>
             </Link>
-            <Link className={`menu-item ${location.pathname.startsWith('/jobs') ? 'active' : ''}`} to="/jobs" onClick={() => setSidebarOpen(false)}>
+            <Link className={`menu-item ${location.pathname.startsWith('/jobs') ? 'active' : ''}`} to="/jobs" title="Job Post" onClick={() => setSidebarOpen(false)}>
               <span className="menu-icon">{MenuIcons.jobs()}</span>
-              Job Post
+              <span className="menu-label">Job Post</span>
             </Link>
-            <Link className={`menu-item ${location.pathname.startsWith('/links') ? 'active' : ''}`} to="/links" onClick={() => setSidebarOpen(false)}>
+            <Link className={`menu-item ${location.pathname.startsWith('/links') ? 'active' : ''}`} to="/links" title="Important Links" onClick={() => setSidebarOpen(false)}>
               <span className="menu-icon">{MenuIcons.links()}</span>
-              Important Links
+              <span className="menu-label">Important Links</span>
             </Link>
-            <Link className={`menu-item ${location.pathname.startsWith('/contact') ? 'active' : ''}`} to="/contact" onClick={() => setSidebarOpen(false)}>
+            <Link className={`menu-item ${location.pathname.startsWith('/contact') ? 'active' : ''}`} to="/contact" title="Contact Messages" onClick={() => setSidebarOpen(false)}>
               <span className="menu-icon">{MenuIcons.contact()}</span>
-              Contact Messages
+              <span className="menu-label">Contact Messages</span>
             </Link>
           </nav>
         </aside>
         <main className="main">
           <header className="topbar">
-            <button type="button" className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 6h18M3 12h18M3 18h18" />
-              </svg>
-            </button>
-            <h1 className="topbar-title">{title}</h1>
-            <div className="search">
-              <svg className="search-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" strokeWidth="2" fill="none" />
-                <path d="M16.5 16.5L21 21" strokeWidth="2" fill="none" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search here..."
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value)
-                  onSearch?.(e.target.value)
-                }}
-              />
+            <div className="topbar-left">
+              <button type="button" className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 6h18M3 12h18M3 18h18" />
+                </svg>
+              </button>
+              <h1 className="topbar-title">{title}</h1>
             </div>
-            <button className="icon-button notify" aria-label="Notifications">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6 9a6 6 0 0 1 12 0v4l1.6 2.6c.3.5-.1 1.4-.8 1.4H5.2c-.7 0-1.1-.9-.8-1.4L6 13V9z" strokeWidth="1.6" fill="none" />
-                <path d="M9.5 19a2.5 2.5 0 0 0 5 0" strokeWidth="1.6" fill="none" />
-              </svg>
-            </button>
-            <div className="profile">
-              <div className="profile-avatar">{user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'AD'}</div>
-              <div>
-                <div className="profile-name">{user?.name || 'Admin'}</div>
-                <div className="profile-role">
-                  <span className="status-dot" />
-                  Admin
-                </div>
+            <div className="topbar-center">
+              <div className="search">
+                <svg className="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" strokeWidth="2" fill="none" />
+                  <path d="M16.5 16.5L21 21" strokeWidth="2" fill="none" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search here..."
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value)
+                    onSearch?.(e.target.value)
+                  }}
+                />
               </div>
-              <button type="button" className="btn-logout" onClick={onLogout} aria-label="Logout" title="Logout">Logout</button>
+            </div>
+            <div className="topbar-right">
+              <div className="profile">
+                <div className="profile-avatar" aria-hidden="true">
+                  {user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'AD'}
+                </div>
+                <div className="profile-meta">
+                  <div className="profile-name">{user?.name || 'Admin'}</div>
+                  <div className="profile-role">
+                    <span className="status-dot" />
+                    Admin
+                  </div>
+                </div>
+                <button type="button" className="btn-logout" onClick={onLogout} aria-label="Logout" title="Logout">
+                  Logout
+                </button>
+              </div>
             </div>
           </header>
           <section className="content">{children}</section>
@@ -265,25 +270,26 @@ function AppContent() {
   }
 
   return (
-    <BrowserRouter>
-      <Shell onSearch={setGlobalSearch} user={user} onLogout={logout}>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/trainers" element={<Trainers />} />
-          <Route path="/vendors" element={<Vendors globalSearch={globalSearch} />} />
-          <Route path="/jobs" element={<JobPost />} />
-          <Route path="/links" element={<ImportantLinks />} />
-          <Route path="/contact" element={<ContactMessages />} />
-        </Routes>
-      </Shell>
-    </BrowserRouter>
+    <Shell onSearch={setGlobalSearch} user={user} onLogout={logout}>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/trainers" element={<Trainers />} />
+        <Route path="/vendors" element={<Vendors globalSearch={globalSearch} />} />
+        <Route path="/jobs" element={<JobPost />} />
+        <Route path="/links" element={<ImportantLinks />} />
+        <Route path="/contact" element={<ContactMessages />} />
+        <Route path="*" element={<Dashboard />} />
+      </Routes>
+    </Shell>
   )
 }
 
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
     </AuthProvider>
   )
 }
