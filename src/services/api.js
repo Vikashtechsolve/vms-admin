@@ -79,7 +79,10 @@ export const getJobApplications = (jobId) => api.get(`/jobs/${jobId}/application
 export const getTrainers = () => api.get('/trainers').then((r) => r.data)
 export const getTrainer = (id) => api.get(`/trainers/${id}`).then((r) => r.data)
 
-const TRAINER_FORM_SKIP = new Set(['photo', 'resume', 'id', '_id', 'createdAt', 'updatedAt', '__v'])
+export const checkTrainerAvailability = (params, config = {}) =>
+  api.get('/trainers/check-availability', { params, ...config }).then((r) => r.data)
+
+const TRAINER_FORM_SKIP = new Set(['photo', 'resume', 'id', '_id', 'createdAt', 'updatedAt', '__v', 'contactNormalized'])
 
 function trainerPayload(trainer, photoFile, resumeFile) {
   if (photoFile || resumeFile) {

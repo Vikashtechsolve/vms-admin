@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { getTrainers, createTrainer, updateTrainer, deleteTrainer } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useTrainerDuplicateCheck } from '../hooks/useTrainerDuplicateCheck.js'
 
 function TrainerMenu({ trainer, onEdit, onDelete }) {
   const [open, setOpen] = useState(false)
@@ -37,105 +38,208 @@ function TrainerMenu({ trainer, onEdit, onDelete }) {
 }
 
 const COMMENT_PREVIEW_COUNT = 1
+const SKILLS_PREVIEW_COUNT = 4
+
+function parseSkills(subject) {
+  if (!subject || !String(subject).trim()) return []
+  return String(subject)
+    .split(/[,;|/]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+function DetailItem({ label, value, children }) {
+  const content = children ?? value
+  if (content == null || content === '') return null
+  return (
+    <div className="trainer-detail-item">
+      <span className="trainer-detail-label">{label}</span>
+      <span className="trainer-detail-value">{content}</span>
+    </div>
+  )
+}
 
 function TrainerCard({ trainer, onAddComment, onDeleteComment, onEdit, onDelete }) {
-  const initials = trainer.name.split(' ').map((n) => n[0]).join('').toUpperCase()
+  const initials = trainer.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
   const hasPhoto = trainer.photo && String(trainer.photo).trim()
   const [photoError, setPhotoError] = useState(false)
   const [commentsExpanded, setCommentsExpanded] = useState(false)
+  const [skillsExpanded, setSkillsExpanded] = useState(false)
   const showPhoto = hasPhoto && !photoError
   const handlePhotoError = useCallback(() => setPhotoError(true), [])
+  const email = trainer.email?.trim()
+  const contact = trainer.contact?.trim()
+  const location = trainer.location?.trim()
+  const skills = parseSkills(trainer.subject)
+  const hasMoreSkills = skills.length > SKILLS_PREVIEW_COUNT
+  const visibleSkills = skillsExpanded || !hasMoreSkills
+    ? skills
+    : skills.slice(0, SKILLS_PREVIEW_COUNT)
+  const hiddenSkillsCount = skills.length - SKILLS_PREVIEW_COUNT
+
   return (
     <article className="trainer-record-card">
-      <div className="trainer-record-header">
-        <div className="trainer-record-profile">
-          <div className="trainer-record-avatar">
+      <div className="trainer-record-layout">
+        <aside className="trainer-record-photo-col">
+          <div className={`trainer-record-photo${showPhoto ? ' trainer-record-photo--has-img' : ''}`}>
             {showPhoto ? (
               <img src={trainer.photo} alt={trainer.name} onError={handlePhotoError} />
             ) : (
-              initials
+              <span className="trainer-record-photo-initials">{initials}</span>
             )}
           </div>
-          <h3 className="trainer-record-name">{trainer.name.toUpperCase()}</h3>
-        </div>
-        <TrainerMenu trainer={trainer} onEdit={onEdit} onDelete={onDelete} />
-      </div>
-
-      <div className="trainer-record-meta">
-        <span><span className="meta-label">Contact Number :</span> <span className="meta-value">{trainer.contact}</span></span>
-        <span className="meta-sep"><span className="meta-label">Location :</span> <span className="meta-value">{trainer.location}</span></span>
-      </div>
-      <div className="trainer-record-meta">
-        <span><span className="meta-label">Qualification :</span> <span className="meta-value">{trainer.qualification}</span></span>
-        <span className="meta-sep"><span className="meta-label">Passing Year :</span> <span className="meta-value">{trainer.passingYear}</span></span>
-        <span className="meta-sep"><span className="meta-label">Subject :</span> <span className="meta-value">{trainer.subject}</span></span>
-      </div>
-      <div className="trainer-record-meta">
-        <span><span className="meta-label">Teaching Experience :</span> <span className="meta-value">{trainer.teachingExperience}</span></span>
-        <span className="meta-sep"><span className="meta-label">Development Experience :</span> <span className="meta-value">{trainer.developmentExperience}</span></span>
-        <span className="meta-sep"><span className="meta-label">Total Experience :</span> <span className="meta-value">{trainer.totalExperience}</span></span>
-      </div>
-      <div className="trainer-record-meta">
-        <span><span className="meta-label">Work Looking for :</span> <span className="meta-value">{trainer.workLookingFor}</span></span>
-        <span className="meta-sep"><span className="meta-label">Mode :</span> <span className="meta-value">{trainer.mode}</span></span>
-        <span className="meta-sep"><span className="meta-label">Payout Expectations (Per hour) :</span> <span className="meta-value">{trainer.payoutExpectations}</span></span>
-      </div>
-      <div className="trainer-record-meta">
-        <span><span className="meta-label">Uploaded Resume :</span> <span className="meta-value">
-          {trainer.resume ? (
-            <a href={trainer.resume} target="_blank" rel="noopener noreferrer" className="trainer-link">View Resume</a>
-          ) : (
-            <span className="text-gray-500">No resume uploaded</span>
-          )}
-        </span></span>
-      </div>
-
-      <div className="trainer-comment-section">
-        <div className="trainer-comment-label">Comment :</div>
-        {trainer.comments?.length > 0 && (() => {
-          const comments = [...trainer.comments].reverse()
-          const showAll = commentsExpanded || comments.length <= COMMENT_PREVIEW_COUNT
-          const visibleComments = showAll ? comments : comments.slice(0, COMMENT_PREVIEW_COUNT)
-          const hasMore = comments.length > COMMENT_PREVIEW_COUNT
-          return (
-            <>
-              <ul className="trainer-comment-list">
-                {visibleComments.map((c) => (
-                  <li key={c.id} className="trainer-comment-item">
-                    <div className="trainer-comment-avatar">{c.authorInitials}</div>
-                    <div className="trainer-comment-body">
-                      <div className="trainer-comment-meta">
-                        <span className="trainer-comment-author">{c.authorName}</span>
-                        <span className="trainer-comment-time">{c.createdAt}</span>
-                        <button type="button" className="trainer-comment-delete" onClick={() => onDeleteComment?.(trainer, c.id)} aria-label="Delete comment">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
-                        </button>
-                      </div>
-                      <div className="trainer-comment-bubble">
-                        {c.verified && (
-                          <span className="trainer-comment-check" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
-                          </span>
-                        )}
-                        {c.text}
-                      </div>
-                    </div>
-                  </li>
+          {skills.length > 0 && (
+            <div className="trainer-record-skills">
+              <span className="trainer-record-skills-label">Skills</span>
+              <ul className={`trainer-record-skills-list${skillsExpanded ? ' trainer-record-skills-list--expanded' : ''}`}>
+                {visibleSkills.map((skill, i) => (
+                  <li key={`${skill}-${i}`} className="trainer-skill-chip">{skill}</li>
                 ))}
               </ul>
-            </>
-          )
-        })()}
-        <div className="trainer-comment-actions">
-          {trainer.comments?.length > COMMENT_PREVIEW_COUNT && (
-            <button type="button" className="trainer-view-comments" onClick={() => setCommentsExpanded((e) => !e)}>
-              {commentsExpanded ? 'Show less' : `View more (${trainer.comments.length - COMMENT_PREVIEW_COUNT})`}
-            </button>
+              {hasMoreSkills && (
+                <button
+                  type="button"
+                  className="trainer-skills-toggle"
+                  onClick={() => setSkillsExpanded((e) => !e)}
+                  aria-expanded={skillsExpanded}
+                >
+                  {skillsExpanded ? 'Show less' : `+${hiddenSkillsCount} more`}
+                </button>
+              )}
+            </div>
           )}
-          <button type="button" className="trainer-add-comment" onClick={() => onAddComment(trainer)}>
-            <span className="trainer-add-comment-icon">+</span>
-            Add Comment
-          </button>
+        </aside>
+
+        <div className="trainer-record-body">
+          <div className="trainer-record-top">
+            <div className="trainer-record-identity">
+              <h3 className="trainer-record-name">{trainer.name}</h3>
+              <div className="trainer-record-badges">
+                {trainer.workLookingFor && (
+                  <span className="trainer-record-badge">{trainer.workLookingFor}</span>
+                )}
+                {trainer.mode?.trim() && (
+                  <span className="trainer-record-badge trainer-record-badge--muted">{trainer.mode}</span>
+                )}
+              </div>
+            </div>
+            <TrainerMenu trainer={trainer} onEdit={onEdit} onDelete={onDelete} />
+          </div>
+
+          {(email || contact || location) && (
+            <div className="trainer-record-contacts">
+              {email && (
+                <a href={`mailto:${email}`} className="trainer-contact-chip trainer-contact-chip--email" title={email}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                  <span>{email}</span>
+                </a>
+              )}
+              {contact && (
+                <a href={`tel:${contact.replace(/\s/g, '')}`} className="trainer-contact-chip" title={contact}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                  <span>{contact}</span>
+                </a>
+              )}
+              {location && (
+                <span className="trainer-contact-chip trainer-contact-chip--static" title={location}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                  <span>{location}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {(trainer.teachingExperience || trainer.developmentExperience || trainer.totalExperience) && (
+            <div className="trainer-record-stats">
+              {trainer.teachingExperience && (
+                <div className="trainer-stat">
+                  <span className="trainer-stat-value">{trainer.teachingExperience}</span>
+                  <span className="trainer-stat-label">Teaching</span>
+                </div>
+              )}
+              {trainer.developmentExperience && (
+                <div className="trainer-stat">
+                  <span className="trainer-stat-value">{trainer.developmentExperience}</span>
+                  <span className="trainer-stat-label">Development</span>
+                </div>
+              )}
+              {trainer.totalExperience && (
+                <div className="trainer-stat trainer-stat--highlight">
+                  <span className="trainer-stat-value">{trainer.totalExperience}</span>
+                  <span className="trainer-stat-label">Total Exp.</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="trainer-record-details">
+            <DetailItem label="Qualification" value={trainer.qualification} />
+            <DetailItem label="Passing Year" value={trainer.passingYear} />
+            <DetailItem label="Payout / Hour" value={trainer.payoutExpectations} />
+            <DetailItem label="Resume">
+              {trainer.resume ? (
+                <a href={trainer.resume} target="_blank" rel="noopener noreferrer" className="trainer-link">
+                  View resume
+                </a>
+              ) : (
+                <span className="trainer-detail-muted">Not uploaded</span>
+              )}
+            </DetailItem>
+          </div>
+
+          <div className="trainer-comment-section">
+            <div className="trainer-comment-label">Comments</div>
+            {trainer.comments?.length > 0 && (() => {
+              const comments = [...trainer.comments].reverse()
+              const showAll = commentsExpanded || comments.length <= COMMENT_PREVIEW_COUNT
+              const visibleComments = showAll ? comments : comments.slice(0, COMMENT_PREVIEW_COUNT)
+              return (
+                <ul className="trainer-comment-list">
+                  {visibleComments.map((c) => (
+                    <li key={c.id} className="trainer-comment-item">
+                      <div className="trainer-comment-avatar">{c.authorInitials}</div>
+                      <div className="trainer-comment-body">
+                        <div className="trainer-comment-meta">
+                          <span className="trainer-comment-author">{c.authorName}</span>
+                          <span className="trainer-comment-time">{c.createdAt}</span>
+                          <button type="button" className="trainer-comment-delete" onClick={() => onDeleteComment?.(trainer, c.id)} aria-label="Delete comment">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                          </button>
+                        </div>
+                        <div className="trainer-comment-bubble">
+                          {c.verified && (
+                            <span className="trainer-comment-check" aria-hidden="true">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                            </span>
+                          )}
+                          {c.text}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )
+            })()}
+            <div className="trainer-comment-actions">
+              {trainer.comments?.length > COMMENT_PREVIEW_COUNT && (
+                <button type="button" className="trainer-view-comments" onClick={() => setCommentsExpanded((e) => !e)}>
+                  {commentsExpanded ? 'Show less' : `View more (${trainer.comments.length - COMMENT_PREVIEW_COUNT})`}
+                </button>
+              )}
+              <button type="button" className="trainer-add-comment" onClick={() => onAddComment(trainer)}>
+                <span className="trainer-add-comment-icon">+</span>
+                Add Comment
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </article>
@@ -144,6 +248,7 @@ function TrainerCard({ trainer, onAddComment, onDeleteComment, onEdit, onDelete 
 
 const TRAINER_DEFAULTS = {
   name: '',
+  email: '',
   contact: '',
   location: '',
   qualification: '',
@@ -165,6 +270,35 @@ const PASSING_YEARS = (() => {
   return Array.from({ length: y - 1979 }, (_, i) => String(y - i))
 })()
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function validateTrainerForm(form) {
+  const name = form.name.trim()
+  const email = form.email.trim().toLowerCase()
+  const contact = form.contact.trim()
+
+  if (!name || !contact) {
+    return 'Full name and contact number are required.'
+  }
+  if (email && !EMAIL_RE.test(email)) {
+    return 'Enter a valid email address.'
+  }
+  return null
+}
+
+function FieldHint({ state }) {
+  if (state.checking) {
+    return <span className="field-hint field-hint--checking">Checking availability…</span>
+  }
+  if (state.error) {
+    return <span className="field-hint field-hint--error" role="alert">{state.error}</span>
+  }
+  if (state.available) {
+    return <span className="field-hint field-hint--ok">Available</span>
+  }
+  return null
+}
+
 function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
   const [form, setForm] = useState({ ...TRAINER_DEFAULTS })
   const [photoFile, setPhotoFile] = useState(null)
@@ -172,6 +306,15 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
+  const [duplicateBaseline, setDuplicateBaseline] = useState({ email: '', contact: '' })
+
+  const { fieldState, checking, canSubmit } = useTrainerDuplicateCheck({
+    email: form.email,
+    contact: form.contact,
+    baseline: duplicateBaseline,
+    excludeId: isAdd ? undefined : trainer?.id,
+    enabled: open,
+  })
 
   useEffect(() => {
     if (!open) return
@@ -182,10 +325,12 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
       setForm({ ...TRAINER_DEFAULTS })
       setPhotoFile(null)
       setResumeFile(null)
+      setDuplicateBaseline({ email: '', contact: '' })
     } else if (trainer) {
       setForm({ ...TRAINER_DEFAULTS, ...trainer })
       setPhotoFile(null)
       setResumeFile(null)
+      setDuplicateBaseline({ email: trainer.email || '', contact: trainer.contact || '' })
     }
   }, [trainer, isAdd, open])
 
@@ -247,11 +392,17 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (saving) return
+    if (saving || checking || !canSubmit) return
     setError('')
 
-    if (!form.name.trim() || !form.contact.trim()) {
-      setError('Full name and contact number are required.')
+    const validationError = validateTrainerForm(form)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    if (fieldState.email.error || fieldState.contact.error) {
+      setError(fieldState.email.error || fieldState.contact.error)
       return
     }
 
@@ -260,9 +411,21 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
     setStatus(hasFiles ? 'Uploading files and saving profile…' : 'Saving trainer profile…')
 
     try {
+      const normalizedContact = form.contact.trim()
       const payload = isAdd
-        ? { ...form, name: form.name.trim(), contact: form.contact.trim() }
-        : { ...trainer, ...form, name: form.name.trim(), contact: form.contact.trim() }
+        ? {
+            ...form,
+            name: form.name.trim(),
+            email: form.email.trim().toLowerCase(),
+            contact: normalizedContact,
+          }
+        : {
+            ...trainer,
+            ...form,
+            name: form.name.trim(),
+            email: form.email.trim().toLowerCase(),
+            contact: normalizedContact,
+          }
       await onSubmit(payload, photoFile || null, resumeFile || null)
       onClose()
     } catch (err) {
@@ -312,8 +475,35 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
               <input type="text" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="Enter full name" required disabled={saving} />
             </label>
             <label>
+              <span>Email</span>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setField('email', e.target.value)}
+                placeholder="Enter email address (optional)"
+                disabled={saving}
+                autoComplete="email"
+                className={fieldState.email.error ? 'input-invalid' : undefined}
+                aria-invalid={!!fieldState.email.error}
+                aria-describedby="trainer-email-hint"
+              />
+              <FieldHint state={fieldState.email} />
+            </label>
+            <label>
               <span>Contact Number *</span>
-              <input type="text" value={form.contact} onChange={(e) => setField('contact', e.target.value)} placeholder="Enter contact number" required disabled={saving} />
+              <input
+                type="tel"
+                value={form.contact}
+                onChange={(e) => setField('contact', e.target.value)}
+                placeholder="Enter contact number"
+                required
+                disabled={saving}
+                autoComplete="tel"
+                className={fieldState.contact.error ? 'input-invalid' : undefined}
+                aria-invalid={!!fieldState.contact.error}
+                aria-describedby="trainer-contact-hint"
+              />
+              <FieldHint state={fieldState.contact} />
             </label>
             <label className="edit-trainer-span-2">
               <span>Location</span>
@@ -407,10 +597,12 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
 
           <div className="modal-actions">
             <button type="button" className="btn btn-ghost" onClick={handleClose} disabled={saving}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
+            <button type="submit" className="btn btn-primary" disabled={saving || checking || !canSubmit}>
               {saving
                 ? (isAdd ? 'Creating…' : 'Saving…')
-                : (isAdd ? 'Create Profile' : 'Save Changes')}
+                : checking
+                  ? 'Checking…'
+                  : (isAdd ? 'Create Profile' : 'Save Changes')}
             </button>
           </div>
         </form>
@@ -475,7 +667,10 @@ export default function Trainers() {
 
   const filtered = trainers.filter((t) => {
     const q = search.trim().toLowerCase()
-    const matchSearch = !q || t.name.toLowerCase().includes(q)
+    const matchSearch = !q ||
+      t.name.toLowerCase().includes(q) ||
+      (t.email || '').toLowerCase().includes(q) ||
+      (t.contact || '').includes(q)
     const matchFilter = !filter || filter === 'All' || (filter === 'Full-Time' && t.workLookingFor?.includes('Full')) || (filter === 'Part-Time' && t.workLookingFor?.includes('Part'))
     return matchSearch && matchFilter
   })
@@ -539,7 +734,7 @@ export default function Trainers() {
         <div className="filters-title">Trainer Search & Filters</div>
         <div className="filters-row">
           <label>
-            <span>Search By Name</span>
+            <span>Search By Name, Email or Mobile</span>
             <input type="text" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </label>
           <label>
