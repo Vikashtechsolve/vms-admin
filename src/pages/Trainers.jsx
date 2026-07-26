@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   getTrainers,
   getTrainerFilterOptions,
@@ -506,6 +507,7 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
   const [form, setForm] = useState({ ...TRAINER_DEFAULTS })
   const [photoFile, setPhotoFile] = useState(null)
   const [resumeFile, setResumeFile] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [status, setStatus] = useState('')
@@ -546,8 +548,25 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
     if (!open) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
-  }, [open])
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !saving) onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open, saving, onClose])
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreview(form.photo || '')
+      return undefined
+    }
+    const url = URL.createObjectURL(photoFile)
+    setPhotoPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [photoFile, form.photo])
 
   if (!open) return null
 
@@ -654,8 +673,8 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
     }
   }
 
-  return (
-    <div className="modal-overlay" onClick={handleClose} role="presentation">
+  const modal = (
+    <div className="modal-overlay trainer-form-overlay" onClick={handleClose} role="presentation">
       <div
         className="modal-content edit-trainer-modal"
         onClick={(e) => e.stopPropagation()}
@@ -663,10 +682,40 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
         aria-modal="true"
         aria-labelledby="edit-trainer-title"
       >
-        <div className="modal-header">
-          <h3 id="edit-trainer-title">{isAdd ? 'Create New Trainer Profile' : 'Edit Trainer Details'}</h3>
-          <button type="button" className="btn-close" aria-label="Close" onClick={handleClose} disabled={saving}>✕</button>
-        </div>
+        <header className="trainer-form-head">
+          <div className="trainer-form-head-main">
+            <div className="trainer-form-head-icon" aria-hidden="true">
+              {isAdd ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <line x1="19" y1="8" x2="19" y2="14" />
+                  <line x1="22" y1="11" x2="16" y2="11" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                </svg>
+              )}
+            </div>
+            <div className="trainer-form-head-copy">
+              <p className="trainer-form-kicker">{isAdd ? 'New profile' : 'Update profile'}</p>
+              <h3 id="edit-trainer-title">{isAdd ? 'Create New Trainer Profile' : 'Edit Trainer Details'}</h3>
+              <p className="trainer-form-subtitle">
+                {isAdd
+                  ? 'Add personal, professional, and upload details to create a complete trainer card.'
+                  : 'Update trainer information, availability, and documents.'}
+              </p>
+            </div>
+          </div>
+          <button type="button" className="trainer-form-close" aria-label="Close" onClick={handleClose} disabled={saving}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </header>
 
         <form onSubmit={handleSubmit} className="edit-trainer-modal-form">
           <div className="edit-trainer-form">
@@ -682,194 +731,289 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
               </div>
             )}
 
-            <p className="edit-trainer-section">Personal Information</p>
+            <section className="trainer-form-section">
+              <div className="trainer-form-section-head">
+                <span className="trainer-form-section-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </span>
+                <div>
+                  <h4>Personal Information</h4>
+                  <p>Basic identity and contact details</p>
+                </div>
+              </div>
+              <div className="trainer-form-section-grid">
+                <label>
+                  <span>Full Name *</span>
+                  <input type="text" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="Enter full name" required disabled={saving} />
+                </label>
+                <label>
+                  <span>Email</span>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setField('email', e.target.value)}
+                    placeholder="name@example.com (optional)"
+                    disabled={saving}
+                    autoComplete="email"
+                    className={fieldState.email.error ? 'input-invalid' : undefined}
+                    aria-invalid={!!fieldState.email.error}
+                    aria-describedby="trainer-email-hint"
+                  />
+                  <FieldHint state={fieldState.email} />
+                </label>
+                <label>
+                  <span>Contact Number *</span>
+                  <input
+                    type="tel"
+                    value={form.contact}
+                    onChange={(e) => setField('contact', e.target.value)}
+                    placeholder="Enter contact number"
+                    required
+                    disabled={saving}
+                    autoComplete="tel"
+                    className={fieldState.contact.error ? 'input-invalid' : undefined}
+                    aria-invalid={!!fieldState.contact.error}
+                    aria-describedby="trainer-contact-hint"
+                  />
+                  <FieldHint state={fieldState.contact} />
+                </label>
+                <div className="trainer-form-location edit-trainer-span-2">
+                  <LocationSelect
+                    state={form.state}
+                    city={form.city}
+                    legacyLocation={form.city ? '' : form.location}
+                    disabled={saving}
+                    onChange={({ state, city }) => setForm((f) => ({ ...f, state, city }))}
+                  />
+                </div>
+              </div>
+            </section>
 
-            <label>
-              <span>Full Name *</span>
-              <input type="text" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="Enter full name" required disabled={saving} />
-            </label>
-            <label>
-              <span>Email</span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setField('email', e.target.value)}
-                placeholder="Enter email address (optional)"
-                disabled={saving}
-                autoComplete="email"
-                className={fieldState.email.error ? 'input-invalid' : undefined}
-                aria-invalid={!!fieldState.email.error}
-                aria-describedby="trainer-email-hint"
-              />
-              <FieldHint state={fieldState.email} />
-            </label>
-            <label>
-              <span>Contact Number *</span>
-              <input
-                type="tel"
-                value={form.contact}
-                onChange={(e) => setField('contact', e.target.value)}
-                placeholder="Enter contact number"
-                required
-                disabled={saving}
-                autoComplete="tel"
-                className={fieldState.contact.error ? 'input-invalid' : undefined}
-                aria-invalid={!!fieldState.contact.error}
-                aria-describedby="trainer-contact-hint"
-              />
-              <FieldHint state={fieldState.contact} />
-            </label>
-            <LocationSelect
-              state={form.state}
-              city={form.city}
-              legacyLocation={form.city ? '' : form.location}
-              disabled={saving}
-              onChange={({ state, city }) => setForm((f) => ({ ...f, state, city }))}
-            />
+            <section className="trainer-form-section">
+              <div className="trainer-form-section-head">
+                <span className="trainer-form-section-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="7" width="20" height="14" rx="2" />
+                    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                  </svg>
+                </span>
+                <div>
+                  <h4>Professional Information</h4>
+                  <p>Skills, experience, and engagement preferences</p>
+                </div>
+              </div>
+              <div className="trainer-form-section-grid">
+                <label>
+                  <span>Qualification</span>
+                  <input type="text" value={form.qualification} onChange={(e) => setField('qualification', e.target.value)} placeholder="e.g. B.Tech, MCA" disabled={saving} />
+                </label>
+                <label>
+                  <span>Passing Year</span>
+                  <select value={form.passingYear} onChange={(e) => setField('passingYear', e.target.value)} disabled={saving}>
+                    <option value="">Select year</option>
+                    {PASSING_YEARS.map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="edit-trainer-span-2">
+                  <span>Subject / Skills</span>
+                  <input type="text" value={form.subject} onChange={(e) => setField('subject', e.target.value)} placeholder="e.g. Java, React, DSA" disabled={saving} />
+                </label>
+                <label>
+                  <span>Payout Expectations (Per hour)</span>
+                  <input type="text" value={form.payoutExpectations} onChange={(e) => setField('payoutExpectations', e.target.value)} placeholder="e.g. 800" disabled={saving} />
+                </label>
+                <label>
+                  <span>Teaching Experience</span>
+                  <input type="text" value={form.teachingExperience} onChange={(e) => setField('teachingExperience', e.target.value)} placeholder="e.g. 3 Years" disabled={saving} />
+                </label>
+                <label>
+                  <span>Development Experience</span>
+                  <input type="text" value={form.developmentExperience} onChange={(e) => setField('developmentExperience', e.target.value)} placeholder="e.g. 5 Years" disabled={saving} />
+                </label>
+                <label>
+                  <span>Total Experience</span>
+                  <input type="text" value={form.totalExperience} onChange={(e) => setField('totalExperience', e.target.value)} placeholder="e.g. 8 Years" disabled={saving} />
+                </label>
+                <label>
+                  <span>Work Looking for</span>
+                  <select value={form.workLookingFor} onChange={(e) => setField('workLookingFor', e.target.value)} disabled={saving}>
+                    <option value="Full-Time Trainer">Full-Time Trainer</option>
+                    <option value="Part-Time Trainer">Part-Time Trainer</option>
+                    <option value="Full-Time Trainer,Part-Time Trainer">Both</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Mode</span>
+                  <select value={form.mode} onChange={(e) => setField('mode', e.target.value)} disabled={saving}>
+                    <option value="Offline Mode">Offline Mode</option>
+                    <option value="Online Mode">Online Mode</option>
+                    <option value="Online Mode,Offline Mode">Hybrid</option>
+                  </select>
+                </label>
+              </div>
+            </section>
 
-            <p className="edit-trainer-section">Professional Information</p>
+            <section className="trainer-form-section">
+              <div className="trainer-form-section-head">
+                <span className="trainer-form-section-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                </span>
+                <div>
+                  <h4>Additional Details</h4>
+                  <p>Rating, availability, and notes</p>
+                </div>
+              </div>
+              <div className="trainer-form-section-grid">
+                <label>
+                  <span>Rating (out of 10)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    step="0.1"
+                    value={form.rating}
+                    onChange={(e) => setField('rating', e.target.value)}
+                    placeholder="e.g. 8.5 (optional)"
+                    disabled={saving}
+                  />
+                </label>
+                <label>
+                  <span>Availability Status</span>
+                  <select value={form.status} onChange={(e) => setField('status', e.target.value)} disabled={saving}>
+                    <option value="">Not set</option>
+                    <option value="available">Available</option>
+                    <option value="not_available">Not Available</option>
+                  </select>
+                </label>
+                <label className="edit-trainer-span-2">
+                  <span>LinkedIn Profile URL</span>
+                  <input
+                    type="url"
+                    value={form.linkedinUrl}
+                    onChange={(e) => setField('linkedinUrl', e.target.value)}
+                    placeholder="https://linkedin.com/in/username (optional)"
+                    disabled={saving}
+                  />
+                </label>
+                <label className="edit-trainer-span-2">
+                  <span>Additional Details</span>
+                  <textarea
+                    value={form.additionalDetails}
+                    onChange={(e) => setField('additionalDetails', e.target.value)}
+                    placeholder="Any extra notes about the trainer (optional)"
+                    rows={3}
+                    disabled={saving}
+                  />
+                </label>
+              </div>
+            </section>
 
-            <label>
-              <span>Qualification</span>
-              <input type="text" value={form.qualification} onChange={(e) => setField('qualification', e.target.value)} placeholder="e.g. B.Tech, MCA" disabled={saving} />
-            </label>
-            <label>
-              <span>Passing Year</span>
-              <select value={form.passingYear} onChange={(e) => setField('passingYear', e.target.value)} disabled={saving}>
-                <option value="">Select year</option>
-                {PASSING_YEARS.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>Subject</span>
-              <input type="text" value={form.subject} onChange={(e) => setField('subject', e.target.value)} placeholder="e.g. Java, React, DSA" disabled={saving} />
-            </label>
-            <label>
-              <span>Payout Expectations (Per hour)</span>
-              <input type="text" value={form.payoutExpectations} onChange={(e) => setField('payoutExpectations', e.target.value)} placeholder="e.g. 800" disabled={saving} />
-            </label>
-            <label>
-              <span>Teaching Experience</span>
-              <input type="text" value={form.teachingExperience} onChange={(e) => setField('teachingExperience', e.target.value)} placeholder="e.g. 3 Years" disabled={saving} />
-            </label>
-            <label>
-              <span>Development Experience</span>
-              <input type="text" value={form.developmentExperience} onChange={(e) => setField('developmentExperience', e.target.value)} placeholder="e.g. 5 Years" disabled={saving} />
-            </label>
-            <label>
-              <span>Total Experience</span>
-              <input type="text" value={form.totalExperience} onChange={(e) => setField('totalExperience', e.target.value)} placeholder="e.g. 8 Years" disabled={saving} />
-            </label>
-            <label>
-              <span>Work Looking for</span>
-              <select value={form.workLookingFor} onChange={(e) => setField('workLookingFor', e.target.value)} disabled={saving}>
-                <option value="Full-Time Trainer">Full-Time Trainer</option>
-                <option value="Part-Time Trainer">Part-Time Trainer</option>
-                <option value="Full-Time Trainer,Part-Time Trainer">Both</option>
-              </select>
-            </label>
-            <label>
-              <span>Mode</span>
-              <select value={form.mode} onChange={(e) => setField('mode', e.target.value)} disabled={saving}>
-                <option value="Offline Mode">Offline Mode</option>
-                <option value="Online Mode">Online Mode</option>
-                <option value="Online Mode,Offline Mode">Hybrid</option>
-              </select>
-            </label>
+            <section className="trainer-form-section">
+              <div className="trainer-form-section-head">
+                <span className="trainer-form-section-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                </span>
+                <div>
+                  <h4>Uploads</h4>
+                  <p>Profile photo and resume documents</p>
+                </div>
+              </div>
+              <div className="trainer-form-uploads">
+                <label className={`trainer-upload-tile${photoFile || form.photo ? ' trainer-upload-tile--filled' : ''}`}>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={saving}
+                    onChange={(e) => pickPhoto(e.target.files?.[0] || null)}
+                  />
+                  <div className="trainer-upload-preview">
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="" />
+                    ) : (
+                      <span className="trainer-upload-placeholder" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <path d="M21 15l-5-5L5 21" />
+                        </svg>
+                      </span>
+                    )}
+                  </div>
+                  <div className="trainer-upload-meta">
+                    <strong>Profile photo</strong>
+                    <span>{photoFile ? photoFile.name : form.photo ? 'Current photo set — click to replace' : 'JPG, PNG or WebP · max 5MB'}</span>
+                  </div>
+                </label>
 
-            <p className="edit-trainer-section">Additional Details</p>
-
-            <label>
-              <span>Rating (out of 10)</span>
-              <input
-                type="number"
-                min="0"
-                max="10"
-                step="0.1"
-                value={form.rating}
-                onChange={(e) => setField('rating', e.target.value)}
-                placeholder="e.g. 8.5 (optional)"
-                disabled={saving}
-              />
-            </label>
-            <label>
-              <span>Availability Status</span>
-              <select value={form.status} onChange={(e) => setField('status', e.target.value)} disabled={saving}>
-                <option value="">Not set</option>
-                <option value="available">Available</option>
-                <option value="not_available">Not Available</option>
-              </select>
-            </label>
-            <label className="edit-trainer-span-2">
-              <span>LinkedIn Profile URL</span>
-              <input
-                type="url"
-                value={form.linkedinUrl}
-                onChange={(e) => setField('linkedinUrl', e.target.value)}
-                placeholder="https://linkedin.com/in/username (optional)"
-                disabled={saving}
-              />
-            </label>
-            <label className="edit-trainer-span-2">
-              <span>Additional Details</span>
-              <textarea
-                value={form.additionalDetails}
-                onChange={(e) => setField('additionalDetails', e.target.value)}
-                placeholder="Any extra notes about the trainer (optional)"
-                rows={3}
-                disabled={saving}
-              />
-            </label>
-
-            <p className="edit-trainer-section">Uploads</p>
-
-            <label className="edit-trainer-upload">
-              <span>Profile photo</span>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                disabled={saving}
-                onChange={(e) => pickPhoto(e.target.files?.[0] || null)}
-              />
-              {photoFile ? (
-                <span className="photo-filename">{photoFile.name}</span>
-              ) : form.photo ? (
-                <span className="photo-filename">Current photo already set</span>
-              ) : null}
-            </label>
-
-            <label className="edit-trainer-upload">
-              <span>Resume (PDF / DOC)</span>
-              <input
-                type="file"
-                accept=".pdf,.doc,.docx,application/pdf"
-                disabled={saving}
-                onChange={(e) => pickResume(e.target.files?.[0] || null)}
-              />
-              {resumeFile ? (
-                <span className="photo-filename">{resumeFile.name}</span>
-              ) : form.resume ? (
-                <a href={form.resume} target="_blank" rel="noopener noreferrer" className="trainer-link photo-filename">View current resume</a>
-              ) : null}
-            </label>
+                <label className={`trainer-upload-tile${resumeFile || form.resume ? ' trainer-upload-tile--filled' : ''}`}>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,application/pdf"
+                    disabled={saving}
+                    onChange={(e) => pickResume(e.target.files?.[0] || null)}
+                  />
+                  <div className="trainer-upload-preview trainer-upload-preview--doc">
+                    <span className="trainer-upload-placeholder" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
+                    </span>
+                  </div>
+                  <div className="trainer-upload-meta">
+                    <strong>Resume</strong>
+                    <span>
+                      {resumeFile
+                        ? resumeFile.name
+                        : form.resume
+                          ? (
+                            <>
+                              Current resume set — click to replace ·{' '}
+                              <a href={form.resume} target="_blank" rel="noopener noreferrer" className="trainer-link" onClick={(e) => e.stopPropagation()}>
+                                View
+                              </a>
+                            </>
+                          )
+                          : 'PDF or DOC · max 5MB'}
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </section>
           </div>
 
-          <div className="modal-actions">
+          <div className="modal-actions trainer-form-actions">
             <button type="button" className="btn btn-ghost" onClick={handleClose} disabled={saving}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving || checking || !canSubmit}>
-              {saving
-                ? (isAdd ? 'Creating…' : 'Saving…')
-                : checking
-                  ? 'Checking…'
-                  : (isAdd ? 'Create Profile' : 'Save Changes')}
+            <button type="submit" className="btn btn-primary trainer-form-submit" disabled={saving || checking || !canSubmit}>
+              {saving ? (
+                <>
+                  <span className="modal-spinner modal-spinner--on-dark" aria-hidden="true" />
+                  {isAdd ? 'Creating…' : 'Saving…'}
+                </>
+              ) : checking ? (
+                'Checking…'
+              ) : (
+                isAdd ? 'Create Profile' : 'Save Changes'
+              )}
             </button>
           </div>
         </form>
       </div>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }
 
 function AddCommentModal({ open, trainer, onClose, onSubmit, currentUserName }) {
