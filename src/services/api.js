@@ -61,10 +61,11 @@ export const loginApi = (username, password) =>
   api.post('/auth/login', { username, password }).then((r) => r.data)
 
 // Vendors
-export const getVendors = () => api.get('/vendors').then((r) => r.data)
+export const getVendors = (params = {}) => api.get('/vendors', { params }).then((r) => r.data)
 export const getVendor = (id) => api.get(`/vendors/${id}`).then((r) => r.data)
 export const createVendor = (vendor) => api.post('/vendors', vendor).then((r) => r.data)
 export const updateVendor = (id, vendor) => api.put(`/vendors/${id}`, vendor).then((r) => r.data)
+export const shiftVendorToRecord = (id) => api.post(`/vendors/${id}/shift-to-record`).then((r) => r.data)
 export const deleteVendor = (id) => api.delete(`/vendors/${id}`)
 
 // Jobs
@@ -75,14 +76,23 @@ export const updateJob = (id, job) => api.put(`/jobs/${id}`, job).then((r) => r.
 export const deleteJob = (id) => api.delete(`/jobs/${id}`)
 export const getJobApplications = (jobId) => api.get(`/jobs/${jobId}/applications`).then((r) => r.data)
 
+// Locations (shared state/city list)
+export const getLocationOptions = () => api.get('/locations').then((r) => r.data)
+
 // Trainers (support FormData when photo file is provided)
-export const getTrainers = () => api.get('/trainers').then((r) => r.data)
+
+/** Returns { items, total, page, limit, pages }. Params drive server-side filtering. */
+export const getTrainers = (params = {}, config = {}) =>
+  api.get('/trainers', { params, ...config }).then((r) => r.data)
+
+export const getTrainerFilterOptions = (params = {}) =>
+  api.get('/trainers/filter-options', { params }).then((r) => r.data)
 export const getTrainer = (id) => api.get(`/trainers/${id}`).then((r) => r.data)
 
 export const checkTrainerAvailability = (params, config = {}) =>
   api.get('/trainers/check-availability', { params, ...config }).then((r) => r.data)
 
-const TRAINER_FORM_SKIP = new Set(['photo', 'resume', 'id', '_id', 'createdAt', 'updatedAt', '__v', 'contactNormalized'])
+const TRAINER_FORM_SKIP = new Set(['photo', 'resume', 'id', '_id', 'createdAt', 'updatedAt', '__v', 'contactNormalized', 'source', 'skills', 'skillTags', 'experienceYears', 'workTypes', 'modes', 'qualificationTag'])
 
 function trainerPayload(trainer, photoFile, resumeFile) {
   if (photoFile || resumeFile) {
@@ -90,6 +100,8 @@ function trainerPayload(trainer, photoFile, resumeFile) {
     Object.entries(trainer).forEach(([k, v]) => {
       if (TRAINER_FORM_SKIP.has(k)) return
       if (k === 'comments') form.append(k, JSON.stringify(v || []))
+      else if (k === 'rating') form.append(k, v == null || v === '' ? '' : String(v))
+      else if (['linkedinUrl', 'status', 'additionalDetails', 'location', 'city', 'state'].includes(k)) form.append(k, v == null ? '' : String(v))
       else if (v != null && v !== '') form.append(k, v)
     })
     if (photoFile) form.append('photo', photoFile)
@@ -117,11 +129,14 @@ export const updateTrainer = (id, trainer, photoFile = null, resumeFile = null) 
   return api.put(`/trainers/${id}`, payload, config).then((r) => r.data)
 }
 
+export const shiftTrainerToRecord = (id) => api.post(`/trainers/${id}/shift-to-record`).then((r) => r.data)
+
 export const deleteTrainer = (id) => api.delete(`/trainers/${id}`)
 
 // Important Links
 export const getImportantLinks = () => api.get('/important-links').then((r) => r.data)
 export const createImportantLink = (link) => api.post('/important-links', link).then((r) => r.data)
+export const updateImportantLink = (id, link) => api.put(`/important-links/${id}`, link).then((r) => r.data)
 export const deleteImportantLink = (id) => api.delete(`/important-links/${id}`)
 
 // Dashboard

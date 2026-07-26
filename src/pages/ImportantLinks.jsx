@@ -1,38 +1,110 @@
-import { useEffect, useState } from 'react'
-import { getImportantLinks, createImportantLink, deleteImportantLink } from '../services/api.js'
+import { useEffect, useRef, useState } from 'react'
+import {
+  getImportantLinks,
+  createImportantLink,
+  updateImportantLink,
+  deleteImportantLink,
+} from '../services/api.js'
 
-function AddLinkModal({ open, onClose, onSubmit }) {
+function LinkMenu({ link, onEdit, onDelete }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const fn = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('click', fn)
+    return () => document.removeEventListener('click', fn)
+  }, [open])
+
+  return (
+    <div className="important-link-menu-wrap" ref={wrapRef}>
+      <button
+        type="button"
+        className="important-link-more"
+        aria-label="More options"
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen((o) => !o)
+        }}
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="1.75" />
+          <circle cx="12" cy="12" r="1.75" />
+          <circle cx="12" cy="19" r="1.75" />
+        </svg>
+      </button>
+      {open && (
+        <div className="important-link-menu-dropdown" role="menu">
+          <button
+            type="button"
+            className="important-link-menu-item"
+            role="menuitem"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(link)
+              setOpen(false)
+            }}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            className="important-link-menu-item danger"
+            role="menuitem"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(link)
+              setOpen(false)
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AddEditLinkModal({ open, link, isAdd, onClose, onSubmit }) {
   const [description, setDescription] = useState('')
   const [url, setUrl] = useState('')
 
-  const reset = () => {
-    setDescription('')
-    setUrl('')
-  }
-
-  const handleClose = () => {
-    reset()
-    onClose()
-  }
+  useEffect(() => {
+    if (!open) return
+    if (isAdd) {
+      setDescription('')
+      setUrl('')
+    } else if (link) {
+      setDescription(link.description || '')
+      setUrl(link.url || '')
+    }
+  }, [open, isAdd, link])
 
   const handleSubmit = (e) => {
     e.preventDefault()
     const trimmedDesc = description.trim()
     const trimmedUrl = url.trim()
     if (!trimmedDesc || !trimmedUrl) return
-    const payload = { description: trimmedDesc, url: trimmedUrl }
-    reset()
+    onSubmit({
+      ...(isAdd ? {} : { id: link.id }),
+      description: trimmedDesc,
+      url: trimmedUrl,
+    })
     onClose()
-    onSubmit(payload)
   }
 
   if (!open) return null
+
   return (
-    <div className="modal-overlay" onClick={handleClose} aria-hidden="true">
+    <div className="modal-overlay" onClick={onClose} aria-hidden="true">
       <div className="modal-content important-links-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Add Link</h3>
-          <button type="button" className="modal-close" onClick={handleClose} aria-label="Close">
+          <h3>{isAdd ? 'Add Link' : 'Edit Link'}</h3>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
             ×
           </button>
         </div>
@@ -45,6 +117,7 @@ function AddLinkModal({ open, onClose, onSubmit }) {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Trainer Adda Documentation"
               required
+              autoFocus
             />
           </label>
           <label>
@@ -58,11 +131,11 @@ function AddLinkModal({ open, onClose, onSubmit }) {
             />
           </label>
           <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={handleClose}>
+            <button type="button" className="btn btn-secondary" onClick={onClose}>
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
-              Add Link
+              {isAdd ? 'Add Link' : 'Save Changes'}
             </button>
           </div>
         </form>
@@ -71,9 +144,9 @@ function AddLinkModal({ open, onClose, onSubmit }) {
   )
 }
 
-function LinkCard({ link, onDelete }) {
+function LinkCard({ link, onEdit, onDelete }) {
   const handleClick = (e) => {
-    if (e.target.closest('.important-link-card-delete')) return
+    if (e.target.closest('.important-link-menu-wrap')) return
     const u = link.url?.trim()
     if (u) {
       const href = u.startsWith('http') ? u : `https://${u}`
@@ -114,21 +187,7 @@ function LinkCard({ link, onDelete }) {
           </svg>
         </span>
       </div>
-      <button
-        type="button"
-        className="important-link-card-delete"
-        onClick={(e) => {
-          e.stopPropagation()
-          onDelete(link)
-        }}
-        aria-label={`Delete ${link.description}`}
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          <line x1="10" y1="11" x2="10" y2="17" />
-          <line x1="14" y1="11" x2="14" y2="17" />
-        </svg>
-      </button>
+      <LinkMenu link={link} onEdit={onEdit} onDelete={onDelete} />
     </article>
   )
 }
@@ -136,7 +195,7 @@ function LinkCard({ link, onDelete }) {
 export default function ImportantLinks() {
   const [links, setLinks] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modalOpen, setModalOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(null) // null | 'add' | link object
   const [error, setError] = useState(null)
 
   const fetchLinks = async () => {
@@ -144,7 +203,7 @@ export default function ImportantLinks() {
       const data = await getImportantLinks()
       setLinks(Array.isArray(data) ? data : [])
       setError(null)
-    } catch (e) {
+    } catch {
       setLinks([])
       setError('Could not load links.')
     } finally {
@@ -158,16 +217,33 @@ export default function ImportantLinks() {
 
   const handleAdd = async (payload) => {
     const tempId = `temp-${Date.now()}`
-    const optimisticLink = { id: tempId, ...payload }
-    setLinks((prev) => [...prev, optimisticLink])
+    setLinks((prev) => [...prev, { id: tempId, ...payload }])
     setError(null)
     try {
-      await createImportantLink(payload)
-      await fetchLinks()
+      const created = await createImportantLink(payload)
+      setLinks((prev) => prev.map((l) => (l.id === tempId ? created : l)))
     } catch (e) {
       console.error('Failed to add link', e)
       setLinks((prev) => prev.filter((l) => l.id !== tempId))
-      setError('Failed to save link. Is the server running on port 3001?')
+      setError('Failed to save link. Is the server running?')
+    }
+  }
+
+  const handleEdit = async (payload) => {
+    if (!payload?.id) return
+    const previous = links.find((l) => l.id === payload.id)
+    setLinks((prev) => prev.map((l) => (l.id === payload.id ? { ...l, ...payload } : l)))
+    setError(null)
+    try {
+      const updated = await updateImportantLink(payload.id, {
+        description: payload.description,
+        url: payload.url,
+      })
+      setLinks((prev) => prev.map((l) => (l.id === payload.id ? updated : l)))
+    } catch (e) {
+      console.error('Failed to update link', e)
+      if (previous) setLinks((prev) => prev.map((l) => (l.id === payload.id ? previous : l)))
+      setError('Failed to update link. Please try again.')
     }
   }
 
@@ -179,11 +255,14 @@ export default function ImportantLinks() {
       return
     }
     if (!window.confirm(`Remove "${link.description}"?`)) return
+    const previous = links
+    setLinks((prev) => prev.filter((l) => l.id !== link.id))
     try {
       await deleteImportantLink(link.id)
-      await fetchLinks()
     } catch (e) {
       console.error('Failed to delete link', e)
+      setLinks(previous)
+      setError('Failed to delete link. Please try again.')
     }
   }
 
@@ -194,7 +273,7 @@ export default function ImportantLinks() {
         <button
           type="button"
           className="btn btn-primary important-links-add"
-          onClick={() => setModalOpen(true)}
+          onClick={() => setModalOpen('add')}
         >
           <span className="important-links-add-icon">+</span>
           Add Links
@@ -210,20 +289,29 @@ export default function ImportantLinks() {
         <p className="important-links-loading">Loading links…</p>
       ) : links.length === 0 ? (
         <div className="important-links-empty">
-          <p>No links yet. Click <strong>Add Links</strong> to add your first one.</p>
+          <p>
+            No links yet. Click <strong>Add Links</strong> to add your first one.
+          </p>
         </div>
       ) : (
         <div className="important-links-grid">
           {links.map((link) => (
-            <LinkCard key={link.id} link={link} onDelete={handleDelete} />
+            <LinkCard
+              key={link.id}
+              link={link}
+              onEdit={(l) => setModalOpen(l)}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}
 
-      <AddLinkModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleAdd}
+      <AddEditLinkModal
+        open={!!modalOpen}
+        link={modalOpen === 'add' ? null : modalOpen}
+        isAdd={modalOpen === 'add'}
+        onClose={() => setModalOpen(null)}
+        onSubmit={(data) => (modalOpen === 'add' ? handleAdd(data) : handleEdit(data))}
       />
     </div>
   )

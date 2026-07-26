@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
-import { createVendor, deleteVendor, getVendors, updateVendor } from '../services/api.js'
+import { createVendor, deleteVendor, getVendors, updateVendor, shiftVendorToRecord } from '../services/api.js'
 
 function VendorMenu({ vendor, onEdit, onDelete }) {
   const [open, setOpen] = useState(false)
@@ -35,7 +35,7 @@ function VendorMenu({ vendor, onEdit, onDelete }) {
   )
 }
 
-function VendorCard({ v, onAction }) {
+function VendorCard({ v, onAction, onShift }) {
   const initials = (v.company || '').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
   const hasLogo = v.logo && String(v.logo).trim()
   const [logoError, setLogoError] = useState(false)
@@ -76,6 +76,18 @@ function VendorCard({ v, onAction }) {
         <span className="meta-sep" aria-hidden="true" />
         <span className="meta-item"><span className="meta-label">Mode :</span> <span className="meta-value">{v.mode}</span></span>
       </div>
+
+      {onShift && (
+        <div className="shift-to-record-bar">
+          <button type="button" className="shift-to-record-btn" onClick={() => onShift(v)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 12h14" />
+              <path d="M12 5l7 7-7 7" />
+            </svg>
+            Shift to Record
+          </button>
+        </div>
+      )}
     </article>
   )
 }
@@ -151,15 +163,17 @@ function AddEditVendorModal({ open, vendor, isAdd, onClose, onSubmit }) {
   )
 }
 
-export default function Vendors({ globalSearch }) {
+export default function Vendors({ globalSearch, mode = 'records' }) {
+  const isRegistrations = mode === 'registrations'
+  const source = isRegistrations ? 'website' : 'admin'
   const [vendors, setVendors] = useState([])
   const [modalOpen, setModalOpen] = useState(null) // null = closed, 'add' = add, vendor = edit
   const [localQuery, setLocalQuery] = useState('')
   const [filter, setFilter] = useState('')
 
   useEffect(() => {
-    getVendors().then(setVendors).catch(() => {})
-  }, [])
+    getVendors({ source }).then(setVendors).catch(() => {})
+  }, [source])
 
   const query = (globalSearch || '').trim().toLowerCase()
   const qLocal = (localQuery || '').trim().toLowerCase()
@@ -214,22 +228,36 @@ export default function Vendors({ globalSearch }) {
     updateVendor(updated.id, updated).catch(() => {})
   }
 
+  function handleShiftToRecord(v) {
+    if (!confirm(`Shift "${v.company}" to Vendor Records?`)) return
+    setVendors((cur) => cur.filter((x) => x.id !== v.id))
+    shiftVendorToRecord(v.id).catch(() => {
+      setVendors((cur) => [v, ...cur])
+    })
+  }
+
   return (
     <>
       <div className="hero-card hero-card-vendor">
         <div>
-          <h2>Vendor Management</h2>
-          <p>Manage company and vendor profiles that hire trainers through Trainer Adda.</p>
+          <h2>{isRegistrations ? 'Vendor Registration' : 'Vendor Management'}</h2>
+          <p>
+            {isRegistrations
+              ? 'Website company signups. Review details and shift approved vendors to Vendor Records.'
+              : 'Manage company and vendor profiles that hire trainers through Trainer Adda.'}
+          </p>
         </div>
-        <button type="button" className="add-vendor-figma" onClick={() => setModalOpen('add')} aria-label="Add Vendor">
-          <span className="add-vendor-circle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-          </span>
-          <span className="add-vendor-label">Add Vendor</span>
-        </button>
+        {!isRegistrations && (
+          <button type="button" className="add-vendor-figma" onClick={() => setModalOpen('add')} aria-label="Add Vendor">
+            <span className="add-vendor-circle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+            </span>
+            <span className="add-vendor-label">Add Vendor</span>
+          </button>
+        )}
       </div>
       <div className="filters">
-        <div className="filters-title">Vendor Search & Filters</div>
+        <div className="filters-title">{isRegistrations ? 'Registration Search & Filters' : 'Vendor Search & Filters'}</div>
         <div className="filters-row">
           <label>
             <span>Search</span>
@@ -249,10 +277,17 @@ export default function Vendors({ globalSearch }) {
         </div>
       </div>
       <div className="vendor-section">
-        <div className="vendor-title">VENDOR LIST ({String(filtered.length).padStart(2, '0')})</div>
+        <div className="vendor-title">
+          {isRegistrations ? 'VENDOR REGISTRATIONS' : 'VENDOR LIST'} ({String(filtered.length).padStart(2, '0')})
+        </div>
         <div className="vendor-list">
           {filtered.map((v) => (
-            <VendorCard key={v.id} v={v} onAction={handleAction} />
+            <VendorCard
+              key={v.id}
+              v={v}
+              onAction={handleAction}
+              onShift={isRegistrations ? handleShiftToRecord : undefined}
+            />
           ))}
         </div>
       </div>

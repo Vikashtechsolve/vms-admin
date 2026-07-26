@@ -27,10 +27,26 @@ const MenuIcons = {
       <circle cx="12" cy="7" r="4" />
     </svg>
   ),
+  trainerReg: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <line x1="19" y1="8" x2="19" y2="14" />
+      <line x1="22" y1="11" x2="16" y2="11" />
+    </svg>
+  ),
   vendors: () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="7" width="20" height="14" rx="2" />
       <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </svg>
+  ),
+  vendorReg: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+      <line x1="12" y1="11" x2="12" y2="17" />
+      <line x1="9" y1="14" x2="15" y2="14" />
     </svg>
   ),
   jobs: () => (
@@ -59,7 +75,9 @@ function Shell({ children, onSearch, user, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const title = useMemo(() => {
     if (location.pathname === '/vendors') return 'Vendor Records'
+    if (location.pathname === '/vendor-registrations') return 'Vendor Registration'
     if (location.pathname === '/trainers') return 'Trainer Records'
+    if (location.pathname === '/trainer-registrations') return 'Trainer Registration'
     if (location.pathname === '/jobs') return 'Job Post'
     if (location.pathname === '/links') return 'Important Links'
     if (location.pathname === '/contact') return 'Contact Messages'
@@ -75,30 +93,53 @@ function Shell({ children, onSearch, user, onLogout }) {
             <AdminBrand showAdminBadge />
           </div>
           <nav className="menu">
-            <Link className={`menu-item ${location.pathname === '/' ? 'active' : ''}`} to="/" title="Dashboard" onClick={() => setSidebarOpen(false)}>
-              <span className="menu-icon">{MenuIcons.dashboard()}</span>
-              <span className="menu-label">Dashboard</span>
-            </Link>
-            <Link className={`menu-item ${location.pathname.startsWith('/trainers') ? 'active' : ''}`} to="/trainers" title="Trainer Records" onClick={() => setSidebarOpen(false)}>
-              <span className="menu-icon">{MenuIcons.trainers()}</span>
-              <span className="menu-label">Trainer Records</span>
-            </Link>
-            <Link className={`menu-item ${location.pathname.startsWith('/vendors') ? 'active' : ''}`} to="/vendors" title="Vendor Records" onClick={() => setSidebarOpen(false)}>
-              <span className="menu-icon">{MenuIcons.vendors()}</span>
-              <span className="menu-label">Vendor Records</span>
-            </Link>
-            <Link className={`menu-item ${location.pathname.startsWith('/jobs') ? 'active' : ''}`} to="/jobs" title="Job Post" onClick={() => setSidebarOpen(false)}>
-              <span className="menu-icon">{MenuIcons.jobs()}</span>
-              <span className="menu-label">Job Post</span>
-            </Link>
-            <Link className={`menu-item ${location.pathname.startsWith('/links') ? 'active' : ''}`} to="/links" title="Important Links" onClick={() => setSidebarOpen(false)}>
-              <span className="menu-icon">{MenuIcons.links()}</span>
-              <span className="menu-label">Important Links</span>
-            </Link>
-            <Link className={`menu-item ${location.pathname.startsWith('/contact') ? 'active' : ''}`} to="/contact" title="Contact Messages" onClick={() => setSidebarOpen(false)}>
-              <span className="menu-icon">{MenuIcons.contact()}</span>
-              <span className="menu-label">Contact Messages</span>
-            </Link>
+            <div className="menu-section">
+              <span className="menu-section-label">Overview</span>
+              <Link className={`menu-item ${location.pathname === '/' ? 'active' : ''}`} to="/" title="Dashboard" onClick={() => setSidebarOpen(false)}>
+                <span className="menu-icon">{MenuIcons.dashboard()}</span>
+                <span className="menu-label">Dashboard</span>
+              </Link>
+            </div>
+
+            <div className="menu-section">
+              <span className="menu-section-label">Trainers</span>
+              <Link className={`menu-item ${location.pathname === '/trainers' ? 'active' : ''}`} to="/trainers" title="Trainer Records" onClick={() => setSidebarOpen(false)}>
+                <span className="menu-icon">{MenuIcons.trainers()}</span>
+                <span className="menu-label">Records</span>
+              </Link>
+              <Link className={`menu-item ${location.pathname === '/trainer-registrations' ? 'active' : ''}`} to="/trainer-registrations" title="Trainer Registration" onClick={() => setSidebarOpen(false)}>
+                <span className="menu-icon">{MenuIcons.trainerReg()}</span>
+                <span className="menu-label">Registrations</span>
+              </Link>
+            </div>
+
+            <div className="menu-section">
+              <span className="menu-section-label">Vendors</span>
+              <Link className={`menu-item ${location.pathname === '/vendors' ? 'active' : ''}`} to="/vendors" title="Vendor Records" onClick={() => setSidebarOpen(false)}>
+                <span className="menu-icon">{MenuIcons.vendors()}</span>
+                <span className="menu-label">Records</span>
+              </Link>
+              <Link className={`menu-item ${location.pathname === '/vendor-registrations' ? 'active' : ''}`} to="/vendor-registrations" title="Vendor Registration" onClick={() => setSidebarOpen(false)}>
+                <span className="menu-icon">{MenuIcons.vendorReg()}</span>
+                <span className="menu-label">Registrations</span>
+              </Link>
+            </div>
+
+            <div className="menu-section">
+              <span className="menu-section-label">Workspace</span>
+              <Link className={`menu-item ${location.pathname.startsWith('/jobs') ? 'active' : ''}`} to="/jobs" title="Job Post" onClick={() => setSidebarOpen(false)}>
+                <span className="menu-icon">{MenuIcons.jobs()}</span>
+                <span className="menu-label">Job Post</span>
+              </Link>
+              <Link className={`menu-item ${location.pathname.startsWith('/links') ? 'active' : ''}`} to="/links" title="Important Links" onClick={() => setSidebarOpen(false)}>
+                <span className="menu-icon">{MenuIcons.links()}</span>
+                <span className="menu-label">Important Links</span>
+              </Link>
+              <Link className={`menu-item ${location.pathname.startsWith('/contact') ? 'active' : ''}`} to="/contact" title="Contact Messages" onClick={() => setSidebarOpen(false)}>
+                <span className="menu-icon">{MenuIcons.contact()}</span>
+                <span className="menu-label">Contact Messages</span>
+              </Link>
+            </div>
           </nav>
         </aside>
         <main className="main">
@@ -273,8 +314,10 @@ function AppContent() {
     <Shell onSearch={setGlobalSearch} user={user} onLogout={logout}>
       <Routes>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/trainers" element={<Trainers />} />
-        <Route path="/vendors" element={<Vendors globalSearch={globalSearch} />} />
+        <Route path="/trainers" element={<Trainers mode="records" />} />
+        <Route path="/trainer-registrations" element={<Trainers mode="registrations" />} />
+        <Route path="/vendors" element={<Vendors globalSearch={globalSearch} mode="records" />} />
+        <Route path="/vendor-registrations" element={<Vendors globalSearch={globalSearch} mode="registrations" />} />
         <Route path="/jobs" element={<JobPost />} />
         <Route path="/links" element={<ImportantLinks />} />
         <Route path="/contact" element={<ContactMessages />} />

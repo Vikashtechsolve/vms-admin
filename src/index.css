@@ -7,9 +7,11 @@
   --bg-card: #FFFFFF;
   --sidebar-bg: #FFFFFF;
   --sidebar-active-bg: #FDF2F2;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --text-muted: #999999;
+  --sidebar-hover-bg: #F7F8FC;
+  --sidebar-icon-bg: #F3F4F8;
+  --text-primary: #1F2937;
+  --text-secondary: #6B7280;
+  --text-muted: #9CA3AF;
   --accent-blue: #C1272D;
   --accent-red: #C1272D;
   --accent-green: #28A745;
