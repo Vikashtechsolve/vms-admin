@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { createVendor, deleteVendor, getVendors, updateVendor, shiftVendorToRecord } from '../services/api.js'
+import { useAuth } from '../context/AuthContext.jsx'
+
+const COMMENT_PREVIEW_COUNT = 1
 
 function VendorMenu({ vendor, onEdit, onDelete }) {
   const [open, setOpen] = useState(false)
@@ -35,10 +38,11 @@ function VendorMenu({ vendor, onEdit, onDelete }) {
   )
 }
 
-function VendorCard({ v, onAction, onShift }) {
+function VendorCard({ v, onAction, onShift, onAddComment, onDeleteComment }) {
   const initials = (v.company || '').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
   const hasLogo = v.logo && String(v.logo).trim()
   const [logoError, setLogoError] = useState(false)
+  const [commentsExpanded, setCommentsExpanded] = useState(false)
   const showLogo = hasLogo && !logoError
   return (
     <article className="vendor-record-card">
@@ -75,6 +79,56 @@ function VendorCard({ v, onAction, onShift }) {
         <span className="meta-item"><span className="meta-label">Hiring Type :</span> <span className="meta-value">{v.hiring}</span></span>
         <span className="meta-sep" aria-hidden="true" />
         <span className="meta-item"><span className="meta-label">Mode :</span> <span className="meta-value">{v.mode}</span></span>
+      </div>
+
+      <div className="trainer-comment-section">
+        <div className="trainer-comment-head">
+          <span className="trainer-comment-label">
+            Comments{v.comments?.length ? ` (${v.comments.length})` : ''}
+          </span>
+          <button type="button" className="trainer-add-comment" onClick={() => onAddComment(v)}>
+            <span className="trainer-add-comment-icon">+</span>
+            Add
+          </button>
+        </div>
+        {v.comments?.length > 0 && (() => {
+          const comments = [...v.comments].reverse()
+          const showAll = commentsExpanded || comments.length <= COMMENT_PREVIEW_COUNT
+          const visibleComments = showAll ? comments : comments.slice(0, COMMENT_PREVIEW_COUNT)
+          return (
+            <>
+              <ul className="trainer-comment-list">
+                {visibleComments.map((c) => (
+                  <li key={c.id} className="trainer-comment-item">
+                    <div className="trainer-comment-avatar">{c.authorInitials}</div>
+                    <div className="trainer-comment-body">
+                      <div className="trainer-comment-meta">
+                        <span className="trainer-comment-author">{c.authorName}</span>
+                        <span className="trainer-comment-time">{c.createdAt}</span>
+                        <button type="button" className="trainer-comment-delete" onClick={() => onDeleteComment?.(v, c.id)} aria-label="Delete comment">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                        </button>
+                      </div>
+                      <div className="trainer-comment-bubble">
+                        {c.verified && (
+                          <span className="trainer-comment-check" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                          </span>
+                        )}
+                        {c.text}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {comments.length > COMMENT_PREVIEW_COUNT && (
+                <button type="button" className="trainer-view-comments" onClick={() => setCommentsExpanded((e) => !e)}>
+                  {commentsExpanded ? 'Show less' : `View more (${comments.length - COMMENT_PREVIEW_COUNT})`}
+                </button>
+              )}
+            </>
+          )
+        })()}
       </div>
 
       {onShift && (
@@ -118,6 +172,7 @@ const VENDOR_DEFAULTS = {
   hiring: 'Full-Time Trainer',
   mode: 'Offline Mode',
   logo: '',
+  comments: [],
 }
 
 function AddEditVendorModal({ open, vendor, isAdd, onClose, onSubmit }) {
@@ -163,11 +218,46 @@ function AddEditVendorModal({ open, vendor, isAdd, onClose, onSubmit }) {
   )
 }
 
+function AddCommentModal({ open, vendor, onClose, onSubmit, currentUserName }) {
+  const [text, setText] = useState('')
+  if (!open || !vendor) return null
+  const initials = currentUserName?.split(' ').map((n) => n[0]).join('').toUpperCase() || 'AD'
+  function handleSubmit(e) {
+    e.preventDefault()
+    if (!text.trim()) return
+    onSubmit(vendor, { authorName: currentUserName || 'Admin', authorInitials: initials, text: text.trim(), createdAt: 'Just now', verified: false })
+    setText('')
+    onClose()
+  }
+  return (
+    <div className="modal-overlay" onClick={onClose} aria-hidden="true">
+      <div className="modal-content trainer-comment-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Add Comment</h3>
+          <button type="button" className="btn-close" aria-label="Close" onClick={onClose}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <label>
+            <span>Comment</span>
+            <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Write your comment..." rows={3} required />
+          </label>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Add Comment</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function Vendors({ globalSearch, mode = 'records' }) {
   const isRegistrations = mode === 'registrations'
   const source = isRegistrations ? 'website' : 'admin'
+  const { user } = useAuth()
   const [vendors, setVendors] = useState([])
   const [modalOpen, setModalOpen] = useState(null) // null = closed, 'add' = add, vendor = edit
+  const [commentModal, setCommentModal] = useState(null)
   const [localQuery, setLocalQuery] = useState('')
   const [filter, setFilter] = useState('')
 
@@ -212,7 +302,7 @@ export default function Vendors({ globalSearch, mode = 'records' }) {
   }
 
   function handleCreate(form) {
-    createVendor(form)
+    createVendor({ ...form, comments: form.comments || [] })
       .then((res) => {
         setVendors((cur) => [res, ...cur])
         setModalOpen(null)
@@ -226,6 +316,19 @@ export default function Vendors({ globalSearch, mode = 'records' }) {
   function handleEdit(updated) {
     setVendors((cur) => cur.map((v) => (v.id === updated.id ? updated : v)))
     updateVendor(updated.id, updated).catch(() => {})
+  }
+
+  function handleAddComment(vendor, comment) {
+    const newComment = { ...comment, id: `c-${Date.now()}` }
+    const updated = { ...vendor, comments: [...(vendor.comments || []), newComment] }
+    setVendors((cur) => cur.map((v) => (v.id === vendor.id ? updated : v)))
+    updateVendor(vendor.id, updated).catch(() => {})
+  }
+
+  function handleDeleteComment(vendor, commentId) {
+    const updated = { ...vendor, comments: (vendor.comments || []).filter((c) => c.id !== commentId) }
+    setVendors((cur) => cur.map((v) => (v.id === vendor.id ? updated : v)))
+    updateVendor(vendor.id, updated).catch(() => {})
   }
 
   function handleShiftToRecord(v) {
@@ -287,6 +390,8 @@ export default function Vendors({ globalSearch, mode = 'records' }) {
               v={v}
               onAction={handleAction}
               onShift={isRegistrations ? handleShiftToRecord : undefined}
+              onAddComment={setCommentModal}
+              onDeleteComment={handleDeleteComment}
             />
           ))}
         </div>
@@ -297,6 +402,13 @@ export default function Vendors({ globalSearch, mode = 'records' }) {
         isAdd={modalOpen === 'add'}
         onClose={() => setModalOpen(null)}
         onSubmit={(data) => (modalOpen === 'add' ? handleCreate(data) : handleEdit(data))}
+      />
+      <AddCommentModal
+        open={!!commentModal}
+        vendor={commentModal}
+        onClose={() => setCommentModal(null)}
+        onSubmit={handleAddComment}
+        currentUserName={user?.name}
       />
     </>
   )

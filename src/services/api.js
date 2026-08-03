@@ -141,6 +141,7 @@ export const deleteImportantLink = (id) => api.delete(`/important-links/${id}`)
 
 // Dashboard
 export const getDashboardStats = () => api.get('/dashboard/stats').then((r) => r.data)
+export const getDashboardOverview = () => api.get('/dashboard/overview').then((r) => r.data)
 
 // Activities
 export const getActivities = (dateKey) => api.get('/activities', { params: { date: dateKey } }).then((r) => r.data)
