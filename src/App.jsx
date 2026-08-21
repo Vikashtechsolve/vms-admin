@@ -10,6 +10,10 @@ import Trainers from './pages/Trainers.jsx'
 import JobPost from './pages/JobPost.jsx'
 import ImportantLinks from './pages/ImportantLinks.jsx'
 import ContactMessages from './pages/ContactMessages.jsx'
+import EmailLayouts from './pages/EmailLayouts.jsx'
+import Campaigns from './pages/Campaigns.jsx'
+import CampaignCompose from './pages/CampaignCompose.jsx'
+import CampaignDetail from './pages/CampaignDetail.jsx'
 import AdminBrand from './components/AdminBrand.jsx'
 
 const MenuIcons = {
@@ -67,6 +71,18 @@ const MenuIcons = {
       <polyline points="22,6 12,13 2,6" />
     </svg>
   ),
+  campaigns: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 2L11 13" />
+      <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+    </svg>
+  ),
+  layouts: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 9h18" />
+    </svg>
+  ),
 }
 
 function Shell({ children, onSearch, user, onLogout }) {
@@ -81,6 +97,8 @@ function Shell({ children, onSearch, user, onLogout }) {
     if (location.pathname === '/jobs') return 'Job Post'
     if (location.pathname === '/links') return 'Important Links'
     if (location.pathname === '/contact') return 'Contact Messages'
+    if (location.pathname.startsWith('/campaigns')) return 'Campaigns'
+    if (location.pathname.startsWith('/email-layouts')) return 'Email Layouts'
     return 'Dashboard'
   }, [location.pathname])
 
@@ -122,6 +140,18 @@ function Shell({ children, onSearch, user, onLogout }) {
               <Link className={`menu-item ${location.pathname === '/vendor-registrations' ? 'active' : ''}`} to="/vendor-registrations" title="Vendor Registration" onClick={() => setSidebarOpen(false)}>
                 <span className="menu-icon">{MenuIcons.vendorReg()}</span>
                 <span className="menu-label">Registrations</span>
+              </Link>
+            </div>
+
+            <div className="menu-section">
+              <span className="menu-section-label">Communications</span>
+              <Link className={`menu-item ${location.pathname.startsWith('/campaigns') ? 'active' : ''}`} to="/campaigns" title="Campaigns" onClick={() => setSidebarOpen(false)}>
+                <span className="menu-icon">{MenuIcons.campaigns()}</span>
+                <span className="menu-label">Campaigns</span>
+              </Link>
+              <Link className={`menu-item ${location.pathname.startsWith('/email-layouts') ? 'active' : ''}`} to="/email-layouts" title="Email Layouts" onClick={() => setSidebarOpen(false)}>
+                <span className="menu-icon">{MenuIcons.layouts()}</span>
+                <span className="menu-label">Email Layouts</span>
               </Link>
             </div>
 
@@ -321,6 +351,11 @@ function AppContent() {
         <Route path="/jobs" element={<JobPost />} />
         <Route path="/links" element={<ImportantLinks />} />
         <Route path="/contact" element={<ContactMessages />} />
+        <Route path="/campaigns" element={<Campaigns />} />
+        <Route path="/campaigns/new" element={<CampaignCompose />} />
+        <Route path="/campaigns/:id/edit" element={<CampaignCompose />} />
+        <Route path="/campaigns/:id" element={<CampaignDetail />} />
+        <Route path="/email-layouts" element={<EmailLayouts />} />
         <Route path="*" element={<Dashboard />} />
       </Routes>
     </Shell>

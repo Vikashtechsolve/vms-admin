@@ -11,9 +11,13 @@
     "dev:server": "json-server --watch db.json --port 3001"
   },
   "dependencies": {
+    "@blocknote/core": "^0.54.0",
+    "@blocknote/react": "^0.54.0",
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.4",
     "framer-motion": "^12.31.0",
+    "jodit": "^4.13.23",
+    "jodit-react": "^5.4.72",
     "json-server": "^1.0.0-beta.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

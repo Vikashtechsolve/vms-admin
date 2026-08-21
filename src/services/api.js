@@ -151,4 +151,26 @@ export const getContacts = () => api.get('/contact').then((r) => r.data)
 export const markContactRead = (id) => api.patch(`/contact/${id}/read`).then((r) => r.data)
 export const deleteContact = (id) => api.delete(`/contact/${id}`)
 
+// Email layouts
+export const getEmailLayouts = () => api.get('/email-layouts').then((r) => r.data)
+export const getEmailLayout = (id) => api.get(`/email-layouts/${id}`).then((r) => r.data)
+export const createEmailLayout = (data) => api.post('/email-layouts', data).then((r) => r.data)
+export const updateEmailLayout = (id, data) => api.put(`/email-layouts/${id}`, data).then((r) => r.data)
+export const deleteEmailLayout = (id) => api.delete(`/email-layouts/${id}`)
+
+// Campaigns
+export const getCampaigns = (params = {}) => api.get('/campaigns', { params }).then((r) => r.data)
+export const getCampaign = (id) => api.get(`/campaigns/${id}`).then((r) => r.data)
+export const createCampaign = (data) => api.post('/campaigns', data).then((r) => r.data)
+export const updateCampaign = (id, data) => api.put(`/campaigns/${id}`, data).then((r) => r.data)
+export const deleteCampaign = (id) => api.delete(`/campaigns/${id}`)
+export const previewCampaignAudience = (data) => api.post('/campaigns/audience/preview', data).then((r) => r.data)
+export const previewCampaignEmail = (data) => api.post('/campaigns/preview', data).then((r) => r.data)
+export const testSendCampaign = (data) => api.post('/campaigns/test-send', data).then((r) => r.data)
+export const sendCampaign = (id) => api.post(`/campaigns/${id}/send`).then((r) => r.data)
+export const cancelCampaign = (id) => api.post(`/campaigns/${id}/cancel`).then((r) => r.data)
+export const duplicateCampaign = (id) => api.post(`/campaigns/${id}/duplicate`).then((r) => r.data)
+export const getCampaignRecipients = (id, params = {}) =>
+  api.get(`/campaigns/${id}/recipients`, { params }).then((r) => r.data)
+
 export default api
