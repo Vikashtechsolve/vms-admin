@@ -12,8 +12,7 @@ const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api')
 
 function withPreviewTags(html) {
   return String(html ?? '')
-    .replace(/\{\{logoUrl\}\}/g, `${API_ORIGIN}/public/email/logo-nav.png`)
-    .replace(/\{\{logoUrlLight\}\}/g, `${API_ORIGIN}/public/email/logo-light.png`)
+    .replace(/\{\{logoUrl\}\}/g, 'https://res.cloudinary.com/dc4gqqd35/image/upload/w_280,f_auto,q_auto/v1787319069/traineradda_bfnnbn.jpg')
     .replace(/\{\{siteUrl\}\}/g, 'https://traineradda.com')
     .replace(/\{\{unsubscribeUrl\}\}/g, '#')
     .replace(/\{\{trainerName\}\}/g, 'Sample Trainer')
