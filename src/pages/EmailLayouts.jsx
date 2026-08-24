@@ -6,7 +6,7 @@ import {
   deleteEmailLayout,
 } from '../services/api.js'
 
-const SAMPLE_BODY = '<p style="margin:0 0 12px;">Hi {{trainerName}},</p><p style="margin:0;color:#64748b;">Your campaign body content appears here — requirements, dates, payout, etc.</p>'
+const SAMPLE_BODY = '<p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.75;color:#1f2937;">Hi {{trainerName}},</p><p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.75;color:#374151;">We have a new training requirement that matches your profile.</p><p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#64748b;">Subject, location, mode, duration, and payout details appear here.</p>'
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/api\/?$/, '')
 
@@ -60,9 +60,9 @@ function LayoutMenu({ layout, onEdit, onDelete }) {
 
 function EmailPreviewFrame({ headerHtml, footerHtml, compact }) {
   const bodyPlaceholder = `
-    <div style="padding:20px 32px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#94a3b8;font-style:italic;text-align:center;background-color:#ffffff;border-top:1px dashed #e5e7eb;border-bottom:1px dashed #e5e7eb;">
-      Campaign body (changes every send)
-    </div>`
+    <p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.75;color:#1f2937;">Hi Sample Trainer,</p>
+    <p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.75;color:#374151;">We have a new training requirement that matches your profile.</p>
+    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.7;color:#64748b;font-style:italic;">Campaign body (changes every send)</p>`
   const html = withPreviewTags(`${headerHtml || ''}${bodyPlaceholder}${footerHtml || ''}`)
 
   return (
