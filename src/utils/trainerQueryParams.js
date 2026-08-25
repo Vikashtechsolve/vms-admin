@@ -4,7 +4,7 @@ export function filtersToAudienceFilter(filters) {
     ? filters.experience.split('-')
     : ['', '']
 
-  const params = { source: 'admin' }
+  const params = {}
   if (filters.q?.trim()) params.q = filters.q.trim()
   if (filters.states?.length) params.state = filters.states.join(',')
   if (filters.cities?.length) params.city = filters.cities.join(',')
@@ -22,7 +22,19 @@ export function filtersToAudienceFilter(filters) {
   return params
 }
 
-export function toQueryParams(filters, page, pageSize, source = 'admin') {
+export function buildCampaignAudienceFilter(filters, selectionMode, audienceSource = 'all') {
+  const base = selectionMode === 'filter' ? filtersToAudienceFilter(filters) : {}
+  if (audienceSource === 'website' || audienceSource === 'admin') {
+    base.source = audienceSource
+  }
+  return base
+}
+
+export function toQueryParams(filters, page, pageSize, audienceSource = 'all') {
   const audience = filtersToAudienceFilter(filters)
-  return { ...audience, page, limit: pageSize, sort: filters.sort || 'newest', source }
+  const params = { ...audience, page, limit: pageSize, sort: filters.sort || 'newest' }
+  if (audienceSource === 'website' || audienceSource === 'admin') {
+    params.source = audienceSource
+  }
+  return params
 }

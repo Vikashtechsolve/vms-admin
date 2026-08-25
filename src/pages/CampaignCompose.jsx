@@ -16,8 +16,14 @@ import RichTextEditor from '../components/RichTextEditor.jsx'
 import TrainerFilters, { EMPTY_FILTERS } from '../components/TrainerFilters.jsx'
 import TrainerPagination, { readStoredPageSize, storePageSize } from '../components/TrainerPagination.jsx'
 import CampaignToast from '../components/CampaignToast.jsx'
-import { filtersToAudienceFilter, toQueryParams } from '../utils/trainerQueryParams.js'
+import { filtersToAudienceFilter, buildCampaignAudienceFilter, toQueryParams } from '../utils/trainerQueryParams.js'
 import { audienceFilterToFilters } from '../utils/audienceFilterToFilters.js'
+import {
+  AUDIENCE_SOURCE_OPTIONS,
+  audienceSourceLabel,
+  parseAudienceSource,
+  trainerSourceLabel,
+} from '../utils/audienceSource.js'
 
 const STEPS = [
   { id: 'content', label: 'Content', desc: 'Subject, body & layout' },
@@ -52,6 +58,7 @@ export default function CampaignCompose() {
   const [layouts, setLayouts] = useState([])
   const [layoutsLoading, setLayoutsLoading] = useState(true)
   const [selectionMode, setSelectionMode] = useState('filter')
+  const [audienceSource, setAudienceSource] = useState('all')
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [filterOptions, setFilterOptions] = useState({ skills: [], qualifications: [], cities: [] })
   const [excludedIds, setExcludedIds] = useState(new Set())
@@ -87,8 +94,10 @@ export default function CampaignCompose() {
       .catch(() => setLayouts([]))
       .finally(() => setLayoutsLoading(false))
 
-    getTrainerFilterOptions({ source: 'admin' }).then(setFilterOptions).catch(() => {})
-  }, [])
+    getTrainerFilterOptions(
+      audienceSource === 'all' ? {} : { source: audienceSource }
+    ).then(setFilterOptions).catch(() => {})
+  }, [audienceSource])
 
   useEffect(() => {
     if (isNew) return
@@ -103,8 +112,11 @@ export default function CampaignCompose() {
         setBodyHtml(c.bodyHtml || '')
         if (c.layoutId) setLayoutId(c.layoutId)
         setSelectionMode(c.selectionMode || 'filter')
-        if (c.audienceFilter && c.selectionMode === 'filter') {
-          setFilters(audienceFilterToFilters(c.audienceFilter))
+        if (c.audienceFilter) {
+          setAudienceSource(parseAudienceSource(c.audienceFilter))
+          if (c.selectionMode === 'filter') {
+            setFilters(audienceFilterToFilters(c.audienceFilter))
+          }
         }
         setExcludedIds(new Set((c.excludedTrainerIds || []).map(String)))
         setSelectedIds(new Set((c.selectedTrainerIds || []).map(String)))
@@ -115,11 +127,11 @@ export default function CampaignCompose() {
 
   const audiencePayload = useCallback(() => ({
     selectionMode,
-    audienceFilter: selectionMode === 'filter' ? filtersToAudienceFilter(filters) : {},
+    audienceFilter: buildCampaignAudienceFilter(filters, selectionMode, audienceSource),
     selectedTrainerIds: selectionMode === 'manual' ? [...selectedIds] : [],
     excludedTrainerIds: [...excludedIds],
     channels: ['email'],
-  }), [selectionMode, filters, selectedIds, excludedIds])
+  }), [selectionMode, audienceSource, filters, selectedIds, excludedIds])
 
   useEffect(() => {
     const seq = ++audienceSeq.current
@@ -142,7 +154,7 @@ export default function CampaignCompose() {
     if (selectionMode === 'all') return
     const seq = ++trainerSeq.current
     setTrainersLoading(true)
-    getTrainers(toQueryParams(filters, page, pageSize, 'admin'))
+    getTrainers(toQueryParams(filters, page, pageSize, audienceSource))
       .then((data) => {
         if (seq !== trainerSeq.current) return
         setTrainers(data.items || [])
@@ -155,7 +167,7 @@ export default function CampaignCompose() {
       .finally(() => {
         if (seq === trainerSeq.current) setTrainersLoading(false)
       })
-  }, [selectionMode, filters, page, pageSize])
+  }, [selectionMode, audienceSource, filters, page, pageSize])
 
   const sampleTrainerId = useMemo(() => {
     const fromList = trainers.find((t) => t.email?.trim())?.id
@@ -220,7 +232,7 @@ export default function CampaignCompose() {
     bodyHtml,
     layoutId,
     selectionMode,
-    audienceFilter: selectionMode === 'filter' ? filtersToAudienceFilter(filters) : {},
+    audienceFilter: buildCampaignAudienceFilter(filters, selectionMode, audienceSource),
     selectedTrainerIds: selectionMode === 'manual' ? [...selectedIds] : [],
     excludedTrainerIds: [...excludedIds],
     channels: ['email'],
@@ -511,9 +523,34 @@ export default function CampaignCompose() {
         <section className="compose-panel" aria-labelledby="compose-audience-heading">
           <h3 id="compose-audience-heading" className="compose-section-title">Choose audience</h3>
 
+          <div className="compose-source-scope">
+            <div className="compose-source-scope-head">
+              <strong>Trainer source</strong>
+              <span>Choose who can be included in this campaign</span>
+            </div>
+            <div className="compose-source-scope-grid" role="radiogroup" aria-label="Trainer source">
+              {AUDIENCE_SOURCE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={audienceSource === option.value}
+                  className={`compose-source-card ${audienceSource === option.value ? 'active' : ''}`}
+                  onClick={() => {
+                    setAudienceSource(option.value)
+                    setPage(1)
+                  }}
+                >
+                  <strong>{option.label}</strong>
+                  <span>{option.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="compose-mode-grid">
             {[
-              { id: 'all', title: 'All trainers', desc: 'Every trainer in your database' },
+              { id: 'all', title: 'All matching', desc: `Every ${audienceSourceLabel(audienceSource).toLowerCase()} trainer` },
               { id: 'filter', title: 'Filtered', desc: 'Skill, city, experience, rating…' },
               { id: 'manual', title: 'Manual', desc: 'Hand-pick from the list' },
             ].map((mode) => (
@@ -546,6 +583,18 @@ export default function CampaignCompose() {
               <span>Matched</span>
               <strong>{audienceLoading ? '…' : audienceSummary?.totalMatched ?? 0}</strong>
             </div>
+            {audienceSource === 'all' && !audienceLoading && audienceSummary?.sourceBreakdown && (
+              <>
+                <div className="compose-stat">
+                  <span>Admin added</span>
+                  <strong>{audienceSummary.sourceBreakdown.admin ?? 0}</strong>
+                </div>
+                <div className="compose-stat">
+                  <span>Website signups</span>
+                  <strong>{audienceSummary.sourceBreakdown.website ?? 0}</strong>
+                </div>
+              </>
+            )}
             <div className="compose-stat compose-stat--success">
               <span>Will receive email</span>
               <strong>{audienceLoading ? '…' : emailEligible}</strong>
@@ -582,6 +631,7 @@ export default function CampaignCompose() {
                 <div className="compose-trainer-list-header">
                   <span />
                   <span>Name</span>
+                  <span>Source</span>
                   <span>Email</span>
                   <span>City</span>
                 </div>
@@ -607,6 +657,11 @@ export default function CampaignCompose() {
                           onChange={() => selectionMode === 'manual' ? toggleSelect(t.id) : toggleExclude(t.id)}
                         />
                         <span className="compose-trainer-name">{t.name}</span>
+                        <span>
+                          <span className={`compose-source-badge compose-source-badge--${t.source === 'website' ? 'website' : 'admin'}`}>
+                            {trainerSourceLabel(t.source)}
+                          </span>
+                        </span>
                         <span className="compose-trainer-email">{t.email || 'No email'}</span>
                         <span className="compose-trainer-city">{t.city || '—'}</span>
                       </label>
@@ -646,8 +701,20 @@ export default function CampaignCompose() {
                 <dd>{selectedLayout?.name || '—'}</dd>
                 <dt>Audience</dt>
                 <dd>
-                  {selectionMode === 'all' ? 'All trainers' : selectionMode === 'filter' ? 'Filtered selection' : `Manual (${selectedIds.size} selected)`}
+                  {selectionMode === 'all'
+                    ? `All matching — ${audienceSourceLabel(audienceSource)}`
+                    : selectionMode === 'filter'
+                      ? `Filtered — ${audienceSourceLabel(audienceSource)}`
+                      : `Manual (${selectedIds.size} selected) — ${audienceSourceLabel(audienceSource)}`}
                 </dd>
+                {audienceSource === 'all' && audienceSummary?.sourceBreakdown && (
+                  <>
+                    <dt>By source</dt>
+                    <dd>
+                      {audienceSummary.sourceBreakdown.admin ?? 0} admin · {audienceSummary.sourceBreakdown.website ?? 0} website
+                    </dd>
+                  </>
+                )}
                 <dt>Matched trainers</dt>
                 <dd>{audienceSummary?.totalMatched ?? 0}</dd>
               </dl>

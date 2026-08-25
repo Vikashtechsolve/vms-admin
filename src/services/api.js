@@ -156,6 +156,7 @@ export const getEmailLayouts = () => api.get('/email-layouts').then((r) => r.dat
 export const getEmailLayout = (id) => api.get(`/email-layouts/${id}`).then((r) => r.data)
 export const createEmailLayout = (data) => api.post('/email-layouts', data).then((r) => r.data)
 export const updateEmailLayout = (id, data) => api.put(`/email-layouts/${id}`, data).then((r) => r.data)
+export const duplicateEmailLayout = (id) => api.post(`/email-layouts/${id}/duplicate`).then((r) => r.data)
 export const deleteEmailLayout = (id) => api.delete(`/email-layouts/${id}`)
 
 // Campaigns

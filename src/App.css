@@ -9112,6 +9112,115 @@ a.trainer-contact-chip--email:hover svg {
   margin-top: 14px;
 }
 
+.comm-layout-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.comm-layout-updated {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.comm-layout-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.comm-layout-card-actions .btn {
+  flex: 1;
+}
+
+.comm-layout-campaigns {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.comm-badge--muted {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.comm-layout-preview-label {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: #f1f5f9;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.comm-layout-modal-id {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.comm-layout-modal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  color: var(--text-secondary);
+}
+
+.comm-layout-html-dump {
+  max-height: 200px;
+  overflow: auto;
+  margin: 0;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.comm-layout-delete-modal {
+  max-width: 440px;
+}
+
+.comm-layout-delete-text {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.comm-layout-delete-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.comm-layout-delete-modal input {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-input);
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.comm-btn-danger {
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
+
+.comm-btn-danger:disabled {
+  opacity: 0.5;
+}
+
 .comm-email-frame {
   border: 1px solid var(--border-light);
   border-radius: 10px;
@@ -9792,6 +9901,84 @@ a.trainer-contact-chip--email:hover svg {
   margin-bottom: 20px;
 }
 
+.compose-source-scope {
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  background: #fafcff;
+}
+
+.compose-source-scope-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.compose-source-scope-head strong {
+  font-size: 14px;
+}
+
+.compose-source-scope-head span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.compose-source-scope-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.compose-source-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border: 2px solid var(--border-light);
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.compose-source-card strong {
+  font-size: 13px;
+}
+
+.compose-source-card span {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.compose-source-card.active {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+}
+
+.compose-source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.compose-source-badge--admin {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.compose-source-badge--website {
+  background: #ecfdf5;
+  color: #047857;
+}
+
 .compose-mode-card {
   display: flex;
   flex-direction: column;
@@ -9908,7 +10095,7 @@ a.trainer-contact-chip--email:hover svg {
 
 .compose-trainer-list-header {
   display: grid;
-  grid-template-columns: 28px 1fr 1fr 100px;
+  grid-template-columns: 28px minmax(120px, 1.2fr) 88px minmax(140px, 1.2fr) 100px;
   gap: 8px;
   padding: 10px 12px;
   background: #f8fafc;
@@ -9921,7 +10108,7 @@ a.trainer-contact-chip--email:hover svg {
 
 .compose-trainer-row {
   display: grid;
-  grid-template-columns: 28px 1fr 1fr 100px;
+  grid-template-columns: 28px minmax(120px, 1.2fr) 88px minmax(140px, 1.2fr) 100px;
   gap: 8px;
   align-items: center;
   padding: 10px 12px;
@@ -10051,6 +10238,7 @@ a.trainer-contact-chip--email:hover svg {
 
   .compose-panel-grid,
   .compose-mode-grid,
+  .compose-source-scope-grid,
   .compose-review-grid {
     grid-template-columns: 1fr;
   }

@@ -5,6 +5,7 @@ import {
   getCampaignRecipients,
   cancelCampaign,
 } from '../services/api.js'
+import { audienceSourceLabel, parseAudienceSource } from '../utils/audienceSource.js'
 
 function StatusBadge({ status }) {
   const label = status === 'processing' ? 'Sending' : status.replace('_', ' ')
@@ -22,10 +23,16 @@ function formatDateTime(iso) {
   })
 }
 
-const AUDIENCE_LABELS = {
-  all: 'All trainers',
+const SELECTION_LABELS = {
+  all: 'All matching',
   filter: 'Filtered audience',
   manual: 'Manual selection',
+}
+
+function formatAudienceScope(campaign) {
+  const mode = SELECTION_LABELS[campaign.selectionMode] || campaign.selectionMode
+  const source = audienceSourceLabel(parseAudienceSource(campaign.audienceFilter))
+  return `${mode} · ${source}`
 }
 
 export default function CampaignDetail() {
@@ -119,7 +126,7 @@ export default function CampaignDetail() {
           <div className="comm-detail-meta">
             <StatusBadge status={campaign.status} />
             {isLive && <span className="comm-live-dot" title="Sending in progress" />}
-            <span>{AUDIENCE_LABELS[campaign.selectionMode] || campaign.selectionMode}</span>
+            <span>{formatAudienceScope(campaign)}</span>
             {campaign.createdBy && <span>by {campaign.createdBy}</span>}
             <span>{formatDateTime(campaign.createdAt)}</span>
           </div>
