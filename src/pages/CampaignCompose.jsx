@@ -60,7 +60,7 @@ export default function CampaignCompose() {
   const [selectionMode, setSelectionMode] = useState('filter')
   const [audienceSource, setAudienceSource] = useState('all')
   const [filters, setFilters] = useState(EMPTY_FILTERS)
-  const [filterOptions, setFilterOptions] = useState({ skills: [], qualifications: [], cities: [] })
+  const [filterOptions, setFilterOptions] = useState({ skills: [], tags: [], qualifications: [], cities: [] })
   const [excludedIds, setExcludedIds] = useState(new Set())
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [audienceSummary, setAudienceSummary] = useState(null)

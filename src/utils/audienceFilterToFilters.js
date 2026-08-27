@@ -6,6 +6,8 @@ export function audienceFilterToFilters(af = {}) {
     cities: af.city ? String(af.city).split(',').filter(Boolean) : [],
     skills: af.skills ? String(af.skills).split(',').filter(Boolean) : [],
     skillsMatch: af.skillsMatch || 'any',
+    tags: af.tags ? String(af.tags).split(',').filter(Boolean) : [],
+    tagsMatch: af.tagsMatch || 'any',
     qualifications: af.qualifications ? String(af.qualifications).split(',').filter(Boolean) : [],
     workTypes: af.workTypes ? String(af.workTypes).split(',').filter(Boolean) : [],
     modes: af.modes ? String(af.modes).split(',').filter(Boolean) : [],

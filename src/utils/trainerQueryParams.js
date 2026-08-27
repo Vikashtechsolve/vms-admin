@@ -12,6 +12,10 @@ export function filtersToAudienceFilter(filters) {
     params.skills = filters.skills.join(',')
     params.skillsMatch = filters.skillsMatch
   }
+  if (filters.tags?.length) {
+    params.tags = filters.tags.join(',')
+    params.tagsMatch = filters.tagsMatch
+  }
   if (filters.qualifications?.length) params.qualifications = filters.qualifications.join(',')
   if (filters.workTypes?.length) params.workTypes = filters.workTypes.join(',')
   if (filters.modes?.length) params.modes = filters.modes.join(',')

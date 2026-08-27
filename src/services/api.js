@@ -92,7 +92,12 @@ export const getTrainer = (id) => api.get(`/trainers/${id}`).then((r) => r.data)
 export const checkTrainerAvailability = (params, config = {}) =>
   api.get('/trainers/check-availability', { params, ...config }).then((r) => r.data)
 
-const TRAINER_FORM_SKIP = new Set(['photo', 'resume', 'id', '_id', 'createdAt', 'updatedAt', '__v', 'contactNormalized', 'source', 'skills', 'skillTags', 'experienceYears', 'workTypes', 'modes', 'qualificationTag'])
+export const getTrainerTags = () => api.get('/trainer-tags').then((r) => r.data)
+export const searchTrainerTags = (q) => api.get('/trainer-tags/search', { params: { q } }).then((r) => r.data)
+export const createTrainerTag = (name) => api.post('/trainer-tags', { name }).then((r) => r.data)
+export const deleteTrainerTag = (id) => api.delete(`/trainer-tags/${id}`)
+
+const TRAINER_FORM_SKIP = new Set(['photo', 'resume', 'id', '_id', 'createdAt', 'updatedAt', '__v', 'contactNormalized', 'source', 'skills', 'skillTags', 'tags', 'experienceYears', 'workTypes', 'modes', 'qualificationTag'])
 
 function trainerPayload(trainer, photoFile, resumeFile) {
   if (photoFile || resumeFile) {
@@ -100,6 +105,7 @@ function trainerPayload(trainer, photoFile, resumeFile) {
     Object.entries(trainer).forEach(([k, v]) => {
       if (TRAINER_FORM_SKIP.has(k)) return
       if (k === 'comments') form.append(k, JSON.stringify(v || []))
+      else if (k === 'tagSlugs') form.append(k, JSON.stringify(v || []))
       else if (k === 'rating') form.append(k, v == null || v === '' ? '' : String(v))
       else if (['linkedinUrl', 'status', 'additionalDetails', 'location', 'city', 'state'].includes(k)) form.append(k, v == null ? '' : String(v))
       else if (v != null && v !== '') form.append(k, v)

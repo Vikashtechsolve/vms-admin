@@ -9,6 +9,8 @@ export const EMPTY_FILTERS = {
   cities: [],
   skills: [],
   skillsMatch: 'any',
+  tags: [],
+  tagsMatch: 'any',
   qualifications: [],
   workTypes: [],
   modes: [],
@@ -63,6 +65,7 @@ export function countActiveFilters(filters) {
     filters.states.length +
     filters.cities.length +
     filters.skills.length +
+    filters.tags.length +
     filters.qualifications.length +
     filters.workTypes.length +
     filters.modes.length +
@@ -113,6 +116,11 @@ export default function TrainerFilters({ filters, onChange, options, loading, re
       key: `skill-${v}`,
       label: options.skills?.find((s) => s.value === v)?.label || v,
       clear: () => set({ skills: filters.skills.filter((s) => s !== v) }),
+    })),
+    ...filters.tags.map((v) => ({
+      key: `tag-${v}`,
+      label: options.tags?.find((s) => s.value === v)?.label || v,
+      clear: () => set({ tags: filters.tags.filter((s) => s !== v) }),
     })),
     ...filters.qualifications.map((v) => ({
       key: `qual-${v}`,
@@ -240,6 +248,27 @@ export default function TrainerFilters({ filters, onChange, options, loading, re
               options={options.skills || []}
               placeholder="Any skill"
               searchPlaceholder="Search skill…"
+            />
+          </div>
+
+          <div className="filter-field">
+            <span className="filter-label">
+              Tags
+              <label className="filter-inline-toggle">
+                <input
+                  type="checkbox"
+                  checked={filters.tagsMatch === 'all'}
+                  onChange={(e) => set({ tagsMatch: e.target.checked ? 'all' : 'any' })}
+                />
+                Match all
+              </label>
+            </span>
+            <MultiSelect
+              values={filters.tags}
+              onChange={(tags) => set({ tags })}
+              options={options.tags || []}
+              placeholder="Any tag"
+              searchPlaceholder="Search tags…"
             />
           </div>
 

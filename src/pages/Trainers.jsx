@@ -14,6 +14,7 @@ import LocationSelect from '../components/LocationSelect.jsx'
 import TrainerFilters, { EMPTY_FILTERS, countActiveFilters } from '../components/TrainerFilters.jsx'
 import TrainerPagination, { readStoredPageSize, storePageSize } from '../components/TrainerPagination.jsx'
 import ResumePreviewModal, { resumeDownloadUrl, downloadResumeFile } from '../components/ResumePreviewModal.jsx'
+import TagPicker from '../components/TagPicker.jsx'
 
 function TrainerMenu({ trainer, onEdit, onDelete }) {
   const [open, setOpen] = useState(false)
@@ -105,6 +106,7 @@ function TrainerCard({ trainer, onAddComment, onDeleteComment, onEdit, onDelete,
   const contact = trainer.contact?.trim()
   const location = (trainer.location || trainer.city || '').trim()
   const skills = parseSkills(trainer.subject)
+  const trainerTags = Array.isArray(trainer.tags) ? trainer.tags.filter(Boolean) : []
   const hasMoreSkills = skills.length > SKILLS_PREVIEW_COUNT
   const visibleSkills = skillsExpanded || !hasMoreSkills
     ? skills
@@ -195,7 +197,7 @@ function TrainerCard({ trainer, onAddComment, onDeleteComment, onEdit, onDelete,
                 </div>
               </div>
 
-              {(availability || trainer.workLookingFor || trainer.mode?.trim()) && (
+              {(availability || trainer.workLookingFor || trainer.mode?.trim() || trainerTags.length > 0) && (
                 <div className="trainer-record-badges">
                   {availability && (
                     <span className={`trainer-record-badge trainer-record-badge--status trainer-record-badge--status-${trainer.status}`}>
@@ -208,6 +210,9 @@ function TrainerCard({ trainer, onAddComment, onDeleteComment, onEdit, onDelete,
                   {trainer.mode?.trim() && (
                     <span className="trainer-record-badge trainer-record-badge--muted">{trainer.mode}</span>
                   )}
+                  {trainerTags.map((tag) => (
+                    <span key={tag} className="trainer-record-badge trainer-record-badge--tag">{tag}</span>
+                  ))}
                 </div>
               )}
             </div>
@@ -445,6 +450,7 @@ const TRAINER_DEFAULTS = {
   photo: '',
   resume: '',
   comments: [],
+  tagSlugs: [],
 }
 
 const PASSING_YEARS = (() => {
@@ -537,6 +543,7 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
         ...trainer,
         rating: trainer.rating == null ? '' : String(trainer.rating),
         status: trainer.status || '',
+        tagSlugs: trainer.tagSlugs || [],
       })
       setPhotoFile(null)
       setResumeFile(null)
@@ -823,6 +830,15 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
                   <span>Subject / Skills</span>
                   <input type="text" value={form.subject} onChange={(e) => setField('subject', e.target.value)} placeholder="e.g. Java, React, DSA" disabled={saving} />
                 </label>
+                <div className="edit-trainer-span-2">
+                  <TagPicker
+                    value={form.tagSlugs || []}
+                    onChange={(tagSlugs) => setField('tagSlugs', tagSlugs)}
+                    disabled={saving}
+                    label="Tags"
+                    hint="Admin-only labels for filtering (AIML, MERN Stack, Java Backend, DSA). Search to pick existing tags — duplicates are prevented."
+                  />
+                </div>
                 <label>
                   <span>Payout Expectations (Per hour)</span>
                   <input type="text" value={form.payoutExpectations} onChange={(e) => setField('payoutExpectations', e.target.value)} placeholder="e.g. 800" disabled={saving} />
@@ -1063,6 +1079,10 @@ function toQueryParams(filters, page, pageSize, source) {
     params.skills = filters.skills.join(',')
     params.skillsMatch = filters.skillsMatch
   }
+  if (filters.tags.length) {
+    params.tags = filters.tags.join(',')
+    params.tagsMatch = filters.tagsMatch
+  }
   if (filters.qualifications.length) params.qualifications = filters.qualifications.join(',')
   if (filters.workTypes.length) params.workTypes = filters.workTypes.join(',')
   if (filters.modes.length) params.modes = filters.modes.join(',')
@@ -1079,7 +1099,7 @@ export default function Trainers({ mode = 'records' }) {
   const { user } = useAuth()
   const [trainers, setTrainers] = useState([])
   const [filters, setFilters] = useState(EMPTY_FILTERS)
-  const [filterOptions, setFilterOptions] = useState({ skills: [], qualifications: [], cities: [] })
+  const [filterOptions, setFilterOptions] = useState({ skills: [], tags: [], qualifications: [], cities: [] })
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(readStoredPageSize)
   const [result, setResult] = useState({ total: 0, pages: 1 })
