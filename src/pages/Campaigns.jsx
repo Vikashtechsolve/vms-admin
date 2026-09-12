@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getCampaigns, deleteCampaign, duplicateCampaign } from '../services/api.js'
+import ChannelPill from '../components/ChannelPill.jsx'
 
 const STATUS_FILTERS = [
   { value: '', label: 'All' },
@@ -187,6 +188,11 @@ export default function Campaigns() {
             <tbody>
               {items.map((c) => {
                 const emailStats = c.channelStats?.email || {}
+                const waStats = c.channelStats?.whatsapp || {}
+                const channels = c.channels || ['email']
+                const totalRecipients = (emailStats.totalRecipients || 0) + (waStats.totalRecipients || 0)
+                const sentCount = (emailStats.sentCount || 0) + (waStats.sentCount || 0)
+                const failedCount = (emailStats.failedCount || 0) + (waStats.failedCount || 0)
                 const isLive = ['queued', 'processing'].includes(c.status)
                 return (
                   <tr
@@ -196,6 +202,11 @@ export default function Campaigns() {
                   >
                     <td className="comm-td-subject">
                       <span className="comm-campaign-subject">{c.subject || 'Untitled campaign'}</span>
+                      <span className="comm-campaign-channels">
+                        {channels.map((ch) => (
+                          <ChannelPill key={ch} channel={ch} />
+                        ))}
+                      </span>
                       {c.createdBy && (
                         <span className="comm-campaign-by">{c.createdBy}</span>
                       )}
@@ -207,9 +218,9 @@ export default function Campaigns() {
                       </div>
                     </td>
                     <td className="comm-td-muted">{formatShortDate(c.createdAt)}</td>
-                    <td className="comm-td-num">{emailStats.totalRecipients || 0}</td>
-                    <td className="comm-td-num comm-td-success">{emailStats.sentCount || 0}</td>
-                    <td className="comm-td-num comm-td-danger">{emailStats.failedCount || 0}</td>
+                    <td className="comm-td-num">{totalRecipients}</td>
+                    <td className="comm-td-num comm-td-success">{sentCount}</td>
+                    <td className="comm-td-num comm-td-danger">{failedCount}</td>
                     <td className="comm-td-actions">
                       <div className="comm-campaign-row-actions">
                         {c.status === 'draft' && (

@@ -106,6 +106,7 @@ function trainerPayload(trainer, photoFile, resumeFile) {
       if (TRAINER_FORM_SKIP.has(k)) return
       if (k === 'comments') form.append(k, JSON.stringify(v || []))
       else if (k === 'tagSlugs') form.append(k, JSON.stringify(v || []))
+      else if (k === 'whatsappOptIn') form.append(k, v ? 'true' : 'false')
       else if (k === 'rating') form.append(k, v == null || v === '' ? '' : String(v))
       else if (['linkedinUrl', 'status', 'additionalDetails', 'location', 'city', 'state'].includes(k)) form.append(k, v == null ? '' : String(v))
       else if (v != null && v !== '') form.append(k, v)
@@ -179,5 +180,14 @@ export const cancelCampaign = (id) => api.post(`/campaigns/${id}/cancel`).then((
 export const duplicateCampaign = (id) => api.post(`/campaigns/${id}/duplicate`).then((r) => r.data)
 export const getCampaignRecipients = (id, params = {}) =>
   api.get(`/campaigns/${id}/recipients`, { params }).then((r) => r.data)
+
+// Messaging channels & WhatsApp templates
+export const getMessagingChannels = () => api.get('/messaging/channels').then((r) => r.data)
+export const getWhatsAppTemplates = () => api.get('/whatsapp-templates').then((r) => r.data)
+export const getWhatsAppStatus = () => api.get('/whatsapp-templates/status').then((r) => r.data)
+export const syncWhatsAppTemplates = () => api.post('/whatsapp-templates/sync').then((r) => r.data)
+export const createWhatsAppTemplate = (data) => api.post('/whatsapp-templates', data).then((r) => r.data)
+export const updateWhatsAppTemplate = (id, data) => api.put(`/whatsapp-templates/${id}`, data).then((r) => r.data)
+export const deleteWhatsAppTemplate = (id) => api.delete(`/whatsapp-templates/${id}`)
 
 export default api

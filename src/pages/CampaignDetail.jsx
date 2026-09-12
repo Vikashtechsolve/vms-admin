@@ -6,6 +6,8 @@ import {
   cancelCampaign,
 } from '../services/api.js'
 import { audienceSourceLabel, parseAudienceSource } from '../utils/audienceSource.js'
+import ChannelPill from '../components/ChannelPill.jsx'
+import { formatChannelLabel } from '../utils/channels.js'
 
 function StatusBadge({ status }) {
   const label = status === 'processing' ? 'Sending' : status.replace('_', ' ')
@@ -43,10 +45,12 @@ export default function CampaignDetail() {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('')
+  const [channelFilter, setChannelFilter] = useState('')
 
   const load = useCallback(async () => {
     const params = { page, limit: 50 }
     if (statusFilter) params.status = statusFilter
+    if (channelFilter) params.channel = channelFilter
 
     try {
       const [campaignData, recipientData] = await Promise.all([
@@ -64,7 +68,7 @@ export default function CampaignDetail() {
       setCampaign(null)
       setRecipients([])
     }
-  }, [id, page, statusFilter])
+  }, [id, page, statusFilter, channelFilter])
 
   useEffect(() => {
     setLoading(true)
@@ -78,7 +82,7 @@ export default function CampaignDetail() {
   }, [campaign?.status, load])
 
   const handleCancel = async () => {
-    if (!window.confirm('Cancel this campaign? Pending emails will not be sent.')) return
+    if (!window.confirm('Cancel this campaign? Pending messages will not be sent.')) return
     await cancelCampaign(id)
     await load()
   }
@@ -106,9 +110,18 @@ export default function CampaignDetail() {
   }
 
   const emailStats = campaign.channelStats?.email || {}
-  const progress = emailStats.totalBatches
-    ? Math.round((emailStats.completedBatches / emailStats.totalBatches) * 100)
-    : 0
+  const waStats = campaign.channelStats?.whatsapp || {}
+  const activeChannels = campaign.channels || ['email']
+  const channelStatsList = activeChannels.map((ch) => campaign.channelStats?.[ch] || {})
+  const progress = (() => {
+    const withBatches = channelStatsList.filter((s) => s.totalBatches > 0)
+    if (!withBatches.length) return 0
+    const sum = withBatches.reduce(
+      (acc, s) => acc + (s.completedBatches / s.totalBatches) * 100,
+      0
+    )
+    return Math.round(sum / withBatches.length)
+  })()
   const isLive = ['queued', 'processing'].includes(campaign.status)
   const isDraft = campaign.status === 'draft'
 
@@ -126,6 +139,11 @@ export default function CampaignDetail() {
           <div className="comm-detail-meta">
             <StatusBadge status={campaign.status} />
             {isLive && <span className="comm-live-dot" title="Sending in progress" />}
+            <span className="comm-campaign-channels comm-campaign-channels--inline">
+              {activeChannels.map((ch) => (
+                <ChannelPill key={ch} channel={ch} />
+              ))}
+            </span>
             <span>{formatAudienceScope(campaign)}</span>
             {campaign.createdBy && <span>by {campaign.createdBy}</span>}
             <span>{formatDateTime(campaign.createdAt)}</span>
@@ -156,25 +174,41 @@ export default function CampaignDetail() {
       )}
 
       <div className="comm-detail-stats-bar">
-        <div className="comm-detail-stat">
-          <span>Sent</span>
-          <strong className="comm-detail-stat--success">{emailStats.sentCount || 0}</strong>
-        </div>
-        <div className="comm-detail-stat">
-          <span>Failed</span>
-          <strong className="comm-detail-stat--danger">{emailStats.failedCount || 0}</strong>
-        </div>
+        {activeChannels.includes('email') && (
+          <>
+            <div className="comm-detail-stat comm-detail-stat--channel">
+              <span>Email sent</span>
+              <strong className="comm-detail-stat--success">{emailStats.sentCount || 0}</strong>
+            </div>
+            <div className="comm-detail-stat">
+              <span>Email failed</span>
+              <strong className="comm-detail-stat--danger">{emailStats.failedCount || 0}</strong>
+            </div>
+          </>
+        )}
+        {activeChannels.includes('whatsapp') && (
+          <>
+            <div className="comm-detail-stat comm-detail-stat--channel comm-detail-stat--wa">
+              <span>WhatsApp sent</span>
+              <strong className="comm-detail-stat--success">{waStats.sentCount || 0}</strong>
+            </div>
+            <div className="comm-detail-stat">
+              <span>WhatsApp failed</span>
+              <strong className="comm-detail-stat--danger">{waStats.failedCount || 0}</strong>
+            </div>
+          </>
+        )}
         <div className="comm-detail-stat">
           <span>Skipped</span>
-          <strong>{emailStats.skippedCount || 0}</strong>
+          <strong>{(emailStats.skippedCount || 0) + (waStats.skippedCount || 0)}</strong>
         </div>
         <div className="comm-detail-stat">
           <span>Recipients</span>
-          <strong>{emailStats.totalRecipients || 0}</strong>
+          <strong>{(emailStats.totalRecipients || 0) + (waStats.totalRecipients || 0)}</strong>
         </div>
       </div>
 
-      {isDraft && emailStats.totalRecipients === 0 && (
+      {isDraft && (emailStats.totalRecipients || 0) + (waStats.totalRecipients || 0) === 0 && (
         <div className="comm-info-banner comm-detail-draft-hint">
           <span className="comm-info-banner-icon">ℹ</span>
           <span>
@@ -189,6 +223,17 @@ export default function CampaignDetail() {
           <h3>Recipients</h3>
           <div className="comm-detail-section-tools">
             <span className="comm-detail-count">{recipientMeta.total} total</span>
+            <select
+              className="comm-detail-filter"
+              value={channelFilter}
+              onChange={(e) => { setChannelFilter(e.target.value); setPage(1) }}
+              aria-label="Filter recipients by channel"
+            >
+              <option value="">All channels</option>
+              {activeChannels.map((ch) => (
+                <option key={ch} value={ch}>{formatChannelLabel(ch)}</option>
+              ))}
+            </select>
             <select
               className="comm-detail-filter"
               value={statusFilter}
@@ -209,7 +254,8 @@ export default function CampaignDetail() {
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Email</th>
+                <th>Channel</th>
+                <th>Address</th>
                 <th>Status</th>
                 <th>Error</th>
               </tr>
@@ -217,7 +263,7 @@ export default function CampaignDetail() {
             <tbody>
               {recipients.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="comm-table-empty">
+                  <td colSpan={5} className="comm-table-empty">
                     {isDraft && !statusFilter
                       ? 'No recipients yet — send the campaign to populate this list.'
                       : 'No recipients match this filter'}
@@ -226,7 +272,8 @@ export default function CampaignDetail() {
               ) : recipients.map((r) => (
                 <tr key={r.id} className="comm-recipient-row">
                   <td className="comm-recipient-name">{r.trainerName || '—'}</td>
-                  <td className="comm-td-muted">{r.address || r.trainerEmail || '—'}</td>
+                  <td><ChannelPill channel={r.channel} /></td>
+                  <td className="comm-td-muted">{r.address || r.trainerEmail || r.trainerContact || '—'}</td>
                   <td><StatusBadge status={r.status} /></td>
                   <td className="comm-recipient-error">{r.errorMessage || '—'}</td>
                 </tr>

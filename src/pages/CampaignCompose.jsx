@@ -5,6 +5,8 @@ import {
   createCampaign,
   updateCampaign,
   getEmailLayouts,
+  getWhatsAppTemplates,
+  getMessagingChannels,
   previewCampaignAudience,
   previewCampaignEmail,
   testSendCampaign,
@@ -13,6 +15,8 @@ import {
   getTrainerFilterOptions,
 } from '../services/api.js'
 import RichTextEditor from '../components/RichTextEditor.jsx'
+import ChannelPicker from '../components/ChannelPicker.jsx'
+import WhatsAppPreviewBubble from '../components/WhatsAppPreviewBubble.jsx'
 import TrainerFilters, { EMPTY_FILTERS } from '../components/TrainerFilters.jsx'
 import TrainerPagination, { readStoredPageSize, storePageSize } from '../components/TrainerPagination.jsx'
 import CampaignToast from '../components/CampaignToast.jsx'
@@ -26,7 +30,7 @@ import {
 } from '../utils/audienceSource.js'
 
 const STEPS = [
-  { id: 'content', label: 'Content', desc: 'Subject, body & layout' },
+  { id: 'content', label: 'Content', desc: 'Opening details & channels' },
   { id: 'audience', label: 'Audience', desc: 'Who receives this' },
   { id: 'review', label: 'Review & Send', desc: 'Confirm and send' },
 ]
@@ -35,6 +39,9 @@ const SKIP_REASON_LABELS = {
   no_email: 'No email on record',
   opt_out: 'Opted out of email',
   unsubscribed: 'Unsubscribed',
+  no_phone: 'No valid phone number',
+  whatsapp_opt_out: 'WhatsApp not enabled',
+  whatsapp_unsubscribed: 'WhatsApp unsubscribed',
   ineligible: 'Not eligible',
 }
 
@@ -52,9 +59,13 @@ export default function CampaignCompose() {
   const isNew = !id || id === 'new'
 
   const [step, setStep] = useState('content')
+  const [channels, setChannels] = useState(['email'])
+  const [channelConfig, setChannelConfig] = useState({ email: true, whatsapp: false })
   const [subject, setSubject] = useState('')
   const [bodyHtml, setBodyHtml] = useState('')
   const [layoutId, setLayoutId] = useState('')
+  const [whatsappTemplateId, setWhatsappTemplateId] = useState('')
+  const [waTemplates, setWaTemplates] = useState([])
   const [layouts, setLayouts] = useState([])
   const [layoutsLoading, setLayoutsLoading] = useState(true)
   const [selectionMode, setSelectionMode] = useState('filter')
@@ -73,14 +84,49 @@ export default function CampaignCompose() {
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [testEmail, setTestEmail] = useState('')
+  const [testPhone, setTestPhone] = useState('')
   const [previewHtml, setPreviewHtml] = useState('')
   const [previewSubject, setPreviewSubject] = useState('')
+  const [previewWhatsApp, setPreviewWhatsApp] = useState('')
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const audienceSeq = useRef(0)
   const trainerSeq = useRef(0)
 
   const stepIndex = STEPS.findIndex((s) => s.id === step)
+  const usesEmail = channels.includes('email')
+  const usesWhatsApp = channels.includes('whatsapp')
+
+  const channelConfigLoaded = useRef(false)
+
+  useEffect(() => {
+    getMessagingChannels()
+      .then((data) => {
+        const map = {}
+        for (const ch of data.channels || []) map[ch.id] = ch.configured
+        setChannelConfig(map)
+        if (!channelConfigLoaded.current) {
+          channelConfigLoaded.current = true
+          setChannels((prev) => {
+            const valid = prev.filter((id) => map[id])
+            if (valid.length) return valid
+            if (map.email) return ['email']
+            if (map.whatsapp) return ['whatsapp']
+            return prev
+          })
+        }
+      })
+      .catch(() => {})
+
+    getWhatsAppTemplates()
+      .then((list) => {
+        const items = Array.isArray(list) ? list : []
+        setWaTemplates(items)
+        const active = items.find((t) => t.isActive && t.status === 'approved')
+        if (active) setWhatsappTemplateId((prev) => prev || active.id)
+      })
+      .catch(() => setWaTemplates([]))
+  }, [])
 
   useEffect(() => {
     setLayoutsLoading(true)
@@ -111,6 +157,8 @@ export default function CampaignCompose() {
         setSubject(c.subject || '')
         setBodyHtml(c.bodyHtml || '')
         if (c.layoutId) setLayoutId(c.layoutId)
+        if (c.whatsappTemplateId) setWhatsappTemplateId(c.whatsappTemplateId)
+        if (c.channels?.length) setChannels(c.channels)
         setSelectionMode(c.selectionMode || 'filter')
         if (c.audienceFilter) {
           setAudienceSource(parseAudienceSource(c.audienceFilter))
@@ -130,24 +178,27 @@ export default function CampaignCompose() {
     audienceFilter: buildCampaignAudienceFilter(filters, selectionMode, audienceSource),
     selectedTrainerIds: selectionMode === 'manual' ? [...selectedIds] : [],
     excludedTrainerIds: [...excludedIds],
-    channels: ['email'],
-  }), [selectionMode, audienceSource, filters, selectedIds, excludedIds])
+    channels,
+  }), [selectionMode, audienceSource, filters, selectedIds, excludedIds, channels])
 
   useEffect(() => {
     const seq = ++audienceSeq.current
     setAudienceLoading(true)
-    previewCampaignAudience(audiencePayload())
-      .then((data) => {
-        if (seq !== audienceSeq.current) return
-        setAudienceSummary(data)
-      })
-      .catch(() => {
-        if (seq !== audienceSeq.current) return
-        setAudienceSummary(null)
-      })
-      .finally(() => {
-        if (seq === audienceSeq.current) setAudienceLoading(false)
-      })
+    const timer = setTimeout(() => {
+      previewCampaignAudience(audiencePayload())
+        .then((data) => {
+          if (seq !== audienceSeq.current) return
+          setAudienceSummary(data)
+        })
+        .catch(() => {
+          if (seq !== audienceSeq.current) return
+          setAudienceSummary(null)
+        })
+        .finally(() => {
+          if (seq === audienceSeq.current) setAudienceLoading(false)
+        })
+    }, 350)
+    return () => clearTimeout(timer)
   }, [audiencePayload])
 
   useEffect(() => {
@@ -170,10 +221,24 @@ export default function CampaignCompose() {
   }, [selectionMode, audienceSource, filters, page, pageSize])
 
   const sampleTrainerId = useMemo(() => {
-    const fromList = trainers.find((t) => t.email?.trim())?.id
-    const fromSample = audienceSummary?.sample?.find((s) => s.email?.trim())?.id
+    const pick = (t) => {
+      if (!t) return false
+      if (usesEmail && t.email?.trim()) return true
+      if (usesWhatsApp && t.contact?.trim()) return true
+      return false
+    }
+    const fromList = trainers.find(pick)?.id
+    const fromSample = audienceSummary?.sample?.find(pick)?.id
     return fromList || fromSample || trainers[0]?.id || audienceSummary?.sample?.[0]?.id
-  }, [trainers, audienceSummary])
+  }, [trainers, audienceSummary, usesEmail, usesWhatsApp])
+
+  function handleChannelsChange(next) {
+    if (!next.length) return
+    setChannels(next)
+    setPreviewHtml('')
+    setPreviewWhatsApp('')
+    setError('')
+  }
 
   const toggleExclude = (trainerId) => {
     const idStr = String(trainerId)
@@ -230,18 +295,21 @@ export default function CampaignCompose() {
   const buildSavePayload = () => ({
     subject,
     bodyHtml,
-    layoutId,
+    layoutId: usesEmail ? layoutId : undefined,
+    whatsappTemplateId: usesWhatsApp ? whatsappTemplateId : undefined,
     selectionMode,
     audienceFilter: buildCampaignAudienceFilter(filters, selectionMode, audienceSource),
     selectedTrainerIds: selectionMode === 'manual' ? [...selectedIds] : [],
     excludedTrainerIds: [...excludedIds],
-    channels: ['email'],
+    channels,
   })
 
   const validateContent = () => {
-    if (!subject.trim()) return 'Subject line is required'
-    if (!bodyHtml.trim()) return 'Email body is required'
-    if (!layoutId) return 'Select an email layout (or create one in Email Layouts)'
+    if (!subject.trim()) return 'Opening title / subject is required'
+    if (!bodyHtml.trim()) return 'Requirement details are required'
+    if (usesEmail && !layoutId) return 'Select an email layout (or create one in Email Layouts)'
+    if (usesWhatsApp && !whatsappTemplateId) return 'Select a WhatsApp template (sync in WhatsApp Templates)'
+    if (channels.length === 0) return 'Select at least one delivery channel'
     return ''
   }
 
@@ -300,11 +368,18 @@ export default function CampaignCompose() {
     if (!sampleTrainerId) return setError('No trainer available for preview')
 
     try {
-      const payload = { trainerId: sampleTrainerId, subject, bodyHtml, layoutId }
-      if (!isNew) payload.campaignId = id
-      const result = await previewCampaignEmail(payload)
-      setPreviewHtml(result.bodyHtml || '')
-      setPreviewSubject(result.subject || subject)
+      const base = { trainerId: sampleTrainerId, subject, bodyHtml, layoutId, whatsappTemplateId }
+      if (!isNew) base.campaignId = id
+
+      if (usesEmail) {
+        const result = await previewCampaignEmail({ ...base, channel: 'email' })
+        setPreviewHtml(result.bodyHtml || '')
+        setPreviewSubject(result.subject || subject)
+      }
+      if (usesWhatsApp) {
+        const result = await previewCampaignEmail({ ...base, channel: 'whatsapp' })
+        setPreviewWhatsApp(result.bodyPreview || '')
+      }
       setError('')
     } catch (e) {
       setError(e.response?.data?.error || 'Preview failed')
@@ -313,14 +388,17 @@ export default function CampaignCompose() {
 
   useEffect(() => {
     if (step !== 'review') return
-    if (!sampleTrainerId || previewHtml) return
+    if (!sampleTrainerId) return
+    const hasPreview = (usesEmail && previewHtml) || (usesWhatsApp && previewWhatsApp)
+    if (hasPreview) return
     handlePreview()
-  }, [step, sampleTrainerId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, sampleTrainerId, usesEmail, usesWhatsApp, previewHtml, previewWhatsApp]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleTestSend = async () => {
+  const handleTestSend = async (channel = 'email') => {
     const contentMsg = validateContent()
     if (contentMsg) return setError(contentMsg)
-    if (!testEmail.trim()) return setError('Enter a test email address')
+    if (channel === 'whatsapp' && !testPhone.trim()) return setError('Enter a test phone number')
+    if (channel === 'email' && !testEmail.trim()) return setError('Enter a test email address')
 
     setSaving(true)
     setError('')
@@ -333,8 +411,13 @@ export default function CampaignCompose() {
       } else {
         await updateCampaign(id, buildSavePayload())
       }
-      await testSendCampaign({ campaignId, testEmail: testEmail.trim() })
-      setToast('Test email sent successfully')
+      await testSendCampaign({
+        campaignId,
+        channel,
+        testEmail: testEmail.trim(),
+        testPhone: testPhone.trim(),
+      })
+      setToast(channel === 'whatsapp' ? 'Test WhatsApp sent' : 'Test email sent successfully')
     } catch (e) {
       setError(e.response?.data?.error || 'Test send failed')
     } finally {
@@ -348,10 +431,17 @@ export default function CampaignCompose() {
     const audienceMsg = validateAudience()
     if (audienceMsg) return setError(audienceMsg)
 
-    const eligible = audienceSummary?.channels?.email?.eligible ?? 0
-    if (eligible === 0) return setError('No eligible recipients. Check audience filters and trainer emails.')
+    const emailEligible = audienceSummary?.channels?.email?.eligible ?? 0
+    const waEligible = audienceSummary?.channels?.whatsapp?.eligible ?? 0
+    const totalEligible = (usesEmail ? emailEligible : 0) + (usesWhatsApp ? waEligible : 0)
+    if (totalEligible === 0) {
+      return setError('No eligible recipients. Check audience filters, emails, phones, and WhatsApp opt-in.')
+    }
 
-    if (!window.confirm(`Send to ${eligible} trainers?`)) return
+    const parts = []
+    if (usesEmail) parts.push(`${emailEligible} email`)
+    if (usesWhatsApp) parts.push(`${waEligible} WhatsApp`)
+    if (!window.confirm(`Send to ${parts.join(' + ')}?`)) return
 
     setSaving(true)
     setError('')
@@ -385,8 +475,13 @@ export default function CampaignCompose() {
 
   const emailEligible = audienceSummary?.channels?.email?.eligible ?? 0
   const emailSkipped = audienceSummary?.channels?.email?.skipped ?? 0
+  const waEligible = audienceSummary?.channels?.whatsapp?.eligible ?? 0
+  const waSkipped = audienceSummary?.channels?.whatsapp?.skipped ?? 0
+  const waSkipReasons = audienceSummary?.channels?.whatsapp?.skipReasons || {}
+  const totalEligible = (usesEmail ? emailEligible : 0) + (usesWhatsApp ? waEligible : 0)
   const skipReasons = audienceSummary?.channels?.email?.skipReasons || {}
   const selectedLayout = layouts.find((l) => l.id === layoutId)
+  const selectedWaTemplate = waTemplates.find((t) => t.id === whatsappTemplateId)
 
   return (
     <div className="comm-page compose-page">
@@ -403,7 +498,7 @@ export default function CampaignCompose() {
           <div>
             <h2 className="comm-page-title">{isNew ? 'New Campaign' : 'Edit Campaign'}</h2>
             <p className="comm-page-desc">
-              Write your requirement email, choose trainers, then review and send.
+              Notify trainers about a new opening via email, WhatsApp, or both.
             </p>
           </div>
         </div>
@@ -445,32 +540,14 @@ export default function CampaignCompose() {
 
       {step === 'content' && (
         <section className="compose-panel" aria-labelledby="compose-content-heading">
+          <ChannelPicker value={channels} onChange={handleChannelsChange} configured={channelConfig} />
+
           <div className="compose-panel-grid">
             <div className="compose-panel-main comm-layout-form-fields">
-              <h3 id="compose-content-heading" className="compose-section-title">Email content</h3>
-
-              {layoutsLoading ? (
-                <p className="compose-muted">Loading layouts…</p>
-              ) : layouts.length === 0 ? (
-                <div className="compose-alert compose-alert--warn">
-                  No email layouts found.{' '}
-                  <Link to="/email-layouts">Create a layout</Link> before sending.
-                </div>
-              ) : (
-                <label>
-                  Email layout
-                  <select value={layoutId} onChange={(e) => setLayoutId(e.target.value)}>
-                    {layouts.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}{l.isDefault ? ' (default)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
+              <h3 id="compose-content-heading" className="compose-section-title">Opening details</h3>
 
               <label>
-                Subject line
+                Opening title
                 <input
                   className="compose-subject-input"
                   value={subject}
@@ -479,39 +556,134 @@ export default function CampaignCompose() {
                 />
               </label>
 
+              <label>
+                Requirement details
+                <span className="compose-field-hint">Used in email body and WhatsApp template variables</span>
+              </label>
               <RichTextEditor key={id || 'new'} value={bodyHtml} onChange={setBodyHtml} />
+
+              {usesEmail && (
+                <>
+                  {layoutsLoading ? (
+                    <p className="compose-muted">Loading layouts…</p>
+                  ) : layouts.length === 0 ? (
+                    <div className="compose-alert compose-alert--warn">
+                      No email layouts found.{' '}
+                      <Link to="/email-layouts">Create a layout</Link> before sending email.
+                    </div>
+                  ) : (
+                    <label>
+                      Email layout
+                      <select value={layoutId} onChange={(e) => setLayoutId(e.target.value)}>
+                        {layouts.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.name}{l.isDefault ? ' (default)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </>
+              )}
+
+              {usesWhatsApp && (
+                <div className="compose-wa-template-block">
+                  {waTemplates.length === 0 ? (
+                    <div className="compose-alert compose-alert--warn">
+                      No WhatsApp templates.{' '}
+                      <Link to="/whatsapp-templates">Sync templates from Meta</Link> first.
+                    </div>
+                  ) : (
+                    <>
+                      <label>
+                        WhatsApp template
+                        <select value={whatsappTemplateId} onChange={(e) => setWhatsappTemplateId(e.target.value)}>
+                          {waTemplates.filter((t) => t.status === 'approved').map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}{t.isActive ? ' (active)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {selectedWaTemplate && (
+                        <div className="compose-wa-template-card">
+                          <div className="compose-wa-template-card-head">
+                            <strong>{selectedWaTemplate.name}</strong>
+                            <span className={`wa-template-status wa-template-status--${selectedWaTemplate.status}`}>
+                              {selectedWaTemplate.status}
+                            </span>
+                          </div>
+                          <p className="compose-muted compose-wa-template-meta">
+                            {selectedWaTemplate.language?.toUpperCase() || 'EN'} · Variables:{' '}
+                            {(selectedWaTemplate.variableMapping || ['firstName', 'requirementTitle', 'requirementBody']).join(' → ')}
+                          </p>
+                          <WhatsAppPreviewBubble
+                            text={selectedWaTemplate.bodyPreview}
+                            compact
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <p className="compose-muted">
+                    Meta only allows approved templates for bulk messages.{' '}
+                    <Link to="/whatsapp-templates">Manage templates</Link>
+                  </p>
+                </div>
+              )}
 
               <div className="compose-test-card">
                 <h4>Test before sending</h4>
-                <p>Send one email to yourself to verify formatting and merge tags.</p>
-                <div className="compose-test-row">
-                  <input
-                    placeholder="your@email.com"
-                    value={testEmail}
-                    onChange={(e) => setTestEmail(e.target.value)}
-                  />
-                  <button type="button" className="btn btn-secondary" onClick={handleTestSend} disabled={saving}>
-                    Send test
-                  </button>
-                  <button type="button" className="btn btn-secondary" onClick={handlePreview}>
-                    Preview
-                  </button>
-                </div>
+                <p>Send one message to yourself to verify content and merge tags.</p>
+                {usesEmail && (
+                  <div className="compose-test-row">
+                    <input
+                      placeholder="your@email.com"
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                    />
+                    <button type="button" className="btn btn-secondary" onClick={() => handleTestSend('email')} disabled={saving}>
+                      Test email
+                    </button>
+                  </div>
+                )}
+                {usesWhatsApp && (
+                  <div className="compose-test-row">
+                    <input
+                      placeholder="9876543210 (with country code if needed)"
+                      value={testPhone}
+                      onChange={(e) => setTestPhone(e.target.value)}
+                    />
+                    <button type="button" className="btn btn-secondary" onClick={() => handleTestSend('whatsapp')} disabled={saving}>
+                      Test WhatsApp
+                    </button>
+                  </div>
+                )}
+                <button type="button" className="btn btn-secondary compose-preview-btn" onClick={handlePreview}>
+                  Preview
+                </button>
               </div>
             </div>
 
             <aside className="compose-panel-side">
               <div className="compose-preview-card">
                 <h4>Live preview</h4>
-                {previewHtml ? (
+                {usesEmail && previewHtml && (
                   <>
                     <p className="compose-preview-subject">
-                      <strong>Subject:</strong> {previewSubject}
+                      <strong>Email subject:</strong> {previewSubject}
                     </p>
                     <div className="compose-preview-html" dangerouslySetInnerHTML={{ __html: previewHtml }} />
                   </>
-                ) : (
-                  <p className="compose-muted">Click Preview to see the email with a sample trainer.</p>
+                )}
+                {usesWhatsApp && previewWhatsApp && (
+                  <div className="compose-wa-preview">
+                    <p className="compose-preview-subject"><strong>WhatsApp</strong></p>
+                    <WhatsAppPreviewBubble text={previewWhatsApp} compact />
+                  </div>
+                )}
+                {!previewHtml && !previewWhatsApp && (
+                  <p className="compose-muted">Click Preview to see how this looks for a sample trainer.</p>
                 )}
               </div>
             </aside>
@@ -595,19 +767,45 @@ export default function CampaignCompose() {
                 </div>
               </>
             )}
-            <div className="compose-stat compose-stat--success">
-              <span>Will receive email</span>
-              <strong>{audienceLoading ? '…' : emailEligible}</strong>
-            </div>
-            <div className="compose-stat">
-              <span>Skipped</span>
-              <strong>{audienceLoading ? '…' : emailSkipped}</strong>
-            </div>
+            {usesEmail && (
+              <div className="compose-stat compose-stat--success">
+                <span>Will receive email</span>
+                <strong>{audienceLoading ? '…' : emailEligible}</strong>
+              </div>
+            )}
+            {usesWhatsApp && (
+              <div className="compose-stat compose-stat--success compose-stat--whatsapp">
+                <span>Will receive WhatsApp</span>
+                <strong>{audienceLoading ? '…' : waEligible}</strong>
+              </div>
+            )}
+            {(usesEmail || usesWhatsApp) && (
+              <div className="compose-stat">
+                <span>Skipped (combined)</span>
+                <strong>
+                  {audienceLoading
+                    ? '…'
+                    : (usesEmail ? emailSkipped : 0) + (usesWhatsApp ? waSkipped : 0)}
+                </strong>
+              </div>
+            )}
           </div>
 
-          {Object.keys(skipReasons).length > 0 && (
+          {Object.keys(skipReasons).length > 0 && usesEmail && (
             <ul className="compose-skip-list">
+              <li className="compose-skip-list-title">Email skips</li>
               {Object.entries(skipReasons).map(([reason, count]) => (
+                <li key={reason}>
+                  {SKIP_REASON_LABELS[reason] || reason}: <strong>{count}</strong>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {Object.keys(waSkipReasons).length > 0 && usesWhatsApp && (
+            <ul className="compose-skip-list compose-skip-list--wa">
+              <li className="compose-skip-list-title">WhatsApp skips</li>
+              {Object.entries(waSkipReasons).map(([reason, count]) => (
                 <li key={reason}>
                   {SKIP_REASON_LABELS[reason] || reason}: <strong>{count}</strong>
                 </li>
@@ -627,12 +825,14 @@ export default function CampaignCompose() {
                 </div>
               </div>
 
-              <div className="compose-trainer-list">
-                <div className="compose-trainer-list-header">
+              <div className={`compose-trainer-list ${usesEmail && usesWhatsApp ? 'compose-trainer-list--dual' : ''}`}>
+                <div className={`compose-trainer-list-header ${usesEmail && usesWhatsApp ? 'compose-trainer-list--dual' : ''}`}>
                   <span />
                   <span>Name</span>
                   <span>Source</span>
-                  <span>Email</span>
+                  {usesEmail && <span>Email</span>}
+                  {usesWhatsApp && <span>Phone</span>}
+                  {!usesEmail && !usesWhatsApp && <span>Contact</span>}
                   <span>City</span>
                 </div>
                 {trainersLoading && trainers.length === 0 ? (
@@ -644,16 +844,21 @@ export default function CampaignCompose() {
                     const idStr = String(t.id)
                     const excluded = excludedIds.has(idStr)
                     const checked = selectionMode === 'manual' ? selectedIds.has(idStr) : !excluded
-                    const noEmail = !t.email?.trim()
+                    const noEmail = usesEmail && !t.email?.trim()
+                    const noPhone = usesWhatsApp && !t.contact?.trim()
+                    const noWaOptIn = usesWhatsApp && !t.whatsappOptIn
+                    const disabled =
+                      selectionMode === 'manual' &&
+                      ((usesEmail && noEmail) || (usesWhatsApp && (noPhone || noWaOptIn)))
                     return (
                       <label
                         key={t.id}
-                        className={`compose-trainer-row ${excluded ? 'excluded' : ''} ${noEmail ? 'no-email' : ''}`}
+                        className={`compose-trainer-row ${usesEmail && usesWhatsApp ? 'compose-trainer-list--dual' : ''} ${excluded ? 'excluded' : ''} ${noEmail || noPhone || noWaOptIn ? 'no-email' : ''}`}
                       >
                         <input
                           type="checkbox"
                           checked={checked}
-                          disabled={noEmail && selectionMode === 'manual'}
+                          disabled={disabled}
                           onChange={() => selectionMode === 'manual' ? toggleSelect(t.id) : toggleExclude(t.id)}
                         />
                         <span className="compose-trainer-name">{t.name}</span>
@@ -662,7 +867,17 @@ export default function CampaignCompose() {
                             {trainerSourceLabel(t.source)}
                           </span>
                         </span>
-                        <span className="compose-trainer-email">{t.email || 'No email'}</span>
+                        {usesEmail && (
+                          <span className="compose-trainer-email">{t.email || 'No email'}</span>
+                        )}
+                        {usesWhatsApp && (
+                          <span className="compose-trainer-email">
+                            {t.contact || 'No phone'}
+                            {t.contact && !t.whatsappOptIn && (
+                              <small className="compose-wa-opt-hint"> · WA off</small>
+                            )}
+                          </span>
+                        )}
                         <span className="compose-trainer-city">{t.city || '—'}</span>
                       </label>
                     )
@@ -693,12 +908,24 @@ export default function CampaignCompose() {
 
           <div className="compose-review-grid">
             <div className="compose-review-card">
-              <h4>Email summary</h4>
+              <h4>Campaign summary</h4>
               <dl className="compose-review-dl">
-                <dt>Subject</dt>
+                <dt>Channels</dt>
+                <dd>{channels.map((c) => (c === 'whatsapp' ? 'WhatsApp' : 'Email')).join(' + ') || '—'}</dd>
+                <dt>Opening title</dt>
                 <dd>{subject || '—'}</dd>
-                <dt>Layout</dt>
-                <dd>{selectedLayout?.name || '—'}</dd>
+                {usesEmail && (
+                  <>
+                    <dt>Email layout</dt>
+                    <dd>{selectedLayout?.name || '—'}</dd>
+                  </>
+                )}
+                {usesWhatsApp && (
+                  <>
+                    <dt>WhatsApp template</dt>
+                    <dd>{selectedWaTemplate?.name || '—'}</dd>
+                  </>
+                )}
                 <dt>Audience</dt>
                 <dd>
                   {selectionMode === 'all'
@@ -722,35 +949,51 @@ export default function CampaignCompose() {
 
             <div className="compose-review-card compose-review-card--highlight">
               <h4>Ready to send</h4>
-              <p className="compose-review-big">{audienceLoading ? '…' : emailEligible}</p>
-              <p>trainers will receive this email</p>
-              {emailSkipped > 0 && (
-                <p className="compose-muted">
-                  {emailSkipped} skipped (no email, unsubscribed, or opted out)
+              {usesEmail && (
+                <p className="compose-review-channel-stat">
+                  <strong>{audienceLoading ? '…' : emailEligible}</strong> email
                 </p>
               )}
+              {usesWhatsApp && (
+                <p className="compose-review-channel-stat compose-review-channel-stat--wa">
+                  <strong>{audienceLoading ? '…' : waEligible}</strong> WhatsApp
+                </p>
+              )}
+              <p className="compose-muted">Messages will be queued and sent in the background</p>
               <button
                 type="button"
                 className="btn btn-primary compose-send-btn"
                 onClick={handleSend}
-                disabled={saving || audienceLoading || emailEligible === 0}
+                disabled={saving || audienceLoading || totalEligible === 0}
               >
                 {saving ? 'Sending…' : 'Send campaign now'}
               </button>
             </div>
           </div>
 
-          <div className="compose-preview-card compose-preview-card--full">
-            <div className="compose-preview-card-head">
-              <h4>Email preview</h4>
-              <button type="button" className="compose-link-btn" onClick={handlePreview}>Refresh preview</button>
-            </div>
-            {previewHtml ? (
+          {(usesEmail && previewHtml) && (
+            <div className="compose-preview-card compose-preview-card--full">
+              <div className="compose-preview-card-head">
+                <h4>Email preview</h4>
+                <button type="button" className="compose-link-btn" onClick={handlePreview}>Refresh preview</button>
+              </div>
               <div className="compose-preview-html" dangerouslySetInnerHTML={{ __html: previewHtml }} />
-            ) : (
-              <p className="compose-muted">Generating preview…</p>
-            )}
-          </div>
+            </div>
+          )}
+
+          {(usesWhatsApp && previewWhatsApp) && (
+            <div className="compose-preview-card compose-preview-card--full compose-wa-preview-card">
+              <div className="compose-preview-card-head">
+                <h4>WhatsApp preview</h4>
+                <button type="button" className="compose-link-btn" onClick={handlePreview}>Refresh preview</button>
+              </div>
+              <WhatsAppPreviewBubble text={previewWhatsApp} />
+            </div>
+          )}
+
+          {!previewHtml && !previewWhatsApp && (
+            <p className="compose-muted">Generating preview…</p>
+          )}
         </section>
       )}
 
@@ -765,8 +1008,8 @@ export default function CampaignCompose() {
         </button>
         <div className="compose-footer-meta">
           Step {stepIndex + 1} of {STEPS.length}
-          {emailEligible > 0 && (
-            <span className="compose-footer-badge">{emailEligible} recipients</span>
+          {totalEligible > 0 && (
+            <span className="compose-footer-badge">{totalEligible} recipients</span>
           )}
         </div>
         {stepIndex < STEPS.length - 1 ? (
@@ -778,9 +1021,9 @@ export default function CampaignCompose() {
             type="button"
             className="btn btn-primary"
             onClick={handleSend}
-            disabled={saving || audienceLoading || emailEligible === 0}
+            disabled={saving || audienceLoading || totalEligible === 0}
           >
-            {saving ? 'Sending…' : `Send to ${emailEligible} trainers`}
+            {saving ? 'Sending…' : `Send campaign`}
           </button>
         )}
       </footer>

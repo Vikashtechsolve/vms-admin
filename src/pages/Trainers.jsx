@@ -239,6 +239,11 @@ function TrainerCard({ trainer, onAddComment, onDeleteComment, onEdit, onDelete,
                     </svg>
                   </span>
                   <span className="trainer-contact-text">{contact}</span>
+                  {trainer.whatsappOptIn === true ? (
+                    <span className="trainer-wa-badge trainer-wa-badge--on" title="WhatsApp alerts enabled">WA</span>
+                  ) : (
+                    <span className="trainer-wa-badge trainer-wa-badge--off" title="WhatsApp alerts disabled">WA off</span>
+                  )}
                 </a>
               )}
               {location && (
@@ -447,6 +452,7 @@ const TRAINER_DEFAULTS = {
   linkedinUrl: '',
   status: '',
   additionalDetails: '',
+  whatsappOptIn: true,
   photo: '',
   resume: '',
   comments: [],
@@ -544,6 +550,7 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
         rating: trainer.rating == null ? '' : String(trainer.rating),
         status: trainer.status || '',
         tagSlugs: trainer.tagSlugs || [],
+        whatsappOptIn: trainer.whatsappOptIn === true,
       })
       setPhotoFile(null)
       setResumeFile(null)
@@ -907,6 +914,18 @@ function EditTrainerModal({ open, trainer, isAdd, onClose, onSubmit }) {
                     <option value="available">Available</option>
                     <option value="not_available">Not Available</option>
                   </select>
+                </label>
+                <label className="edit-trainer-span-2 trainer-form-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={!!form.whatsappOptIn}
+                    onChange={(e) => setField('whatsappOptIn', e.target.checked)}
+                    disabled={saving}
+                  />
+                  <span>
+                    <strong>WhatsApp opening alerts</strong>
+                    <small>Allow bulk WhatsApp messages about trainer openings (requires valid phone)</small>
+                  </span>
                 </label>
                 <label className="edit-trainer-span-2">
                   <span>LinkedIn Profile URL</span>
