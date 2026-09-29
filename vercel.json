@@ -2,8 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://trainer-adda-backend.ownkube.app/api/:path*",
-      "pre":"https://vms-backend-production-9255.up.railway.app"
+      "destination": "https://trainer-adda-backend.ownkube.app/api/:path*"
     },
     {
       "source": "/((?!assets/).*)",
