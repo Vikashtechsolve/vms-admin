@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getCampaigns, deleteCampaign, duplicateCampaign } from '../services/api.js'
 import ChannelPill from '../components/ChannelPill.jsx'
@@ -67,6 +67,17 @@ function CampaignMenu({ campaign, onDuplicate, onDelete }) {
   )
 }
 
+function tallyChannelStats(campaign) {
+  return Object.values(campaign.channelStats || {}).reduce(
+    (acc, stats) => {
+      acc.sent += stats?.sentCount || 0
+      acc.failed += stats?.failedCount || 0
+      return acc
+    },
+    { sent: 0, failed: 0 }
+  )
+}
+
 export default function Campaigns() {
   const navigate = useNavigate()
   const [items, setItems] = useState([])
@@ -75,18 +86,29 @@ export default function Campaigns() {
   const [statusFilter, setStatusFilter] = useState('')
   const [meta, setMeta] = useState({ total: 0, pages: 1 })
 
-  useEffect(() => {
-    setLoading(true)
+  const refresh = useCallback(async () => {
     const params = { page, limit: PAGE_SIZE }
     if (statusFilter) params.status = statusFilter
-    getCampaigns(params)
-      .then((data) => {
-        setItems(data.items || [])
-        setMeta({ total: data.total || 0, pages: data.pages || 1 })
-      })
+    const data = await getCampaigns(params)
+    setItems(data.items || [])
+    setMeta({ total: data.total || 0, pages: data.pages || 1 })
+  }, [page, statusFilter])
+
+  useEffect(() => {
+    setLoading(true)
+    refresh()
       .catch(() => setItems([]))
       .finally(() => setLoading(false))
-  }, [page, statusFilter])
+  }, [refresh])
+
+  const hasLive = items.some((c) => c.status === 'queued' || c.status === 'processing')
+  useEffect(() => {
+    if (!hasLive) return
+    const timer = setInterval(() => {
+      refresh().catch(() => {})
+    }, 2000)
+    return () => clearInterval(timer)
+  }, [hasLive, refresh])
 
   const handleDelete = async (campaign) => {
     if (!window.confirm('Delete this draft campaign?')) return
@@ -102,8 +124,17 @@ export default function Campaigns() {
     navigate(`/campaigns/${copy.id}/edit`)
   }
 
-  const pageSent = items.reduce((n, c) => n + (c.channelStats?.email?.sentCount || 0), 0)
-  const pageFailed = items.reduce((n, c) => n + (c.channelStats?.email?.failedCount || 0), 0)
+  const pageTotals = items.reduce(
+    (acc, campaign) => {
+      const tally = tallyChannelStats(campaign)
+      acc.sent += tally.sent
+      acc.failed += tally.failed
+      return acc
+    },
+    { sent: 0, failed: 0 }
+  )
+  const pageSent = pageTotals.sent
+  const pageFailed = pageTotals.failed
 
   return (
     <div className="comm-page">

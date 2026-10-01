@@ -77,7 +77,7 @@ export default function CampaignDetail() {
 
   useEffect(() => {
     if (!campaign || !['queued', 'processing'].includes(campaign.status)) return
-    const timer = setInterval(load, 5000)
+    const timer = setInterval(load, 2000)
     return () => clearInterval(timer)
   }, [campaign?.status, load])
 
@@ -113,15 +113,20 @@ export default function CampaignDetail() {
   const waStats = campaign.channelStats?.whatsapp || {}
   const activeChannels = campaign.channels || ['email']
   const channelStatsList = activeChannels.map((ch) => campaign.channelStats?.[ch] || {})
-  const progress = (() => {
-    const withBatches = channelStatsList.filter((s) => s.totalBatches > 0)
-    if (!withBatches.length) return 0
-    const sum = withBatches.reduce(
-      (acc, s) => acc + (s.completedBatches / s.totalBatches) * 100,
-      0
-    )
-    return Math.round(sum / withBatches.length)
-  })()
+  const delivery = channelStatsList.reduce(
+    (acc, stats) => {
+      acc.sent += stats.sentCount || 0
+      acc.failed += stats.failedCount || 0
+      acc.skipped += stats.skippedCount || 0
+      acc.total += stats.totalRecipients || 0
+      return acc
+    },
+    { sent: 0, failed: 0, skipped: 0, total: 0 }
+  )
+  const delivered = delivery.sent + delivery.failed + delivery.skipped
+  const progress = delivery.total > 0
+    ? Math.min(100, Math.round((delivered / delivery.total) * 100))
+    : 0
   const isLive = ['queued', 'processing'].includes(campaign.status)
   const isDraft = campaign.status === 'draft'
 
@@ -165,7 +170,9 @@ export default function CampaignDetail() {
         <div className="comm-detail-live">
           <div className="comm-detail-live-text">
             <span className="comm-live-dot" />
-            Sending in progress — {progress}% complete
+            {delivered === 0
+              ? 'Preparing to send…'
+              : `Sending ${delivered.toLocaleString()} of ${delivery.total.toLocaleString()} — ${progress}%`}
           </div>
           <div className="comm-detail-progress">
             <div className="comm-detail-progress-bar" style={{ width: `${progress}%` }} />
